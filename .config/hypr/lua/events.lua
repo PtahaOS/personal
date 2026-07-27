@@ -8,5 +8,5 @@ hl.on("hyprland.start", function ()
 end)
 
 hl.on("hyprland.shutdown", function()
-    hl.exec_cmd("killall " .. browser)
+    hl.exec_cmd("killall " .. browser .. " && sleep 0.1")
 end)

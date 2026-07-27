@@ -2,7 +2,7 @@
 
 sudo pacman -S --noconfirm --needed pavucontrol man okular \
 	zip unzip gcc git make cmake archlinux-xdg-menu \
-	libreoffice 
+	libreoffice rsync
 
 #Applications menu for dolfin
 sudo ln -sf /etc/xdg/menus/arch-applications.menu /etc/xdg/menus/applications.menu

@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-
-## Hyprland
-rm -r ~/.config/hypr/*
-cp -r ~/personal/.config/hypr/* ~/.config/hypr/
-ls -a ~/.config/hypr/
-hyprctl reload
-

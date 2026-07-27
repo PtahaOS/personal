@@ -1,0 +1,23 @@
+#!/usr/bin/env zsh
+
+## hyprland
+echo "\nhyprland"
+rsync -a --delete ~/personal/.config/hypr/ ~/.config/hypr/
+#rm -r ~/.config/hypr/*
+#cp -r ~/personal/.config/hypr/* ~/.config/hypr/
+ls -a ~/.config/hypr/
+hyprctl reload
+
+## wezterm
+echo "\nwezterm"
+rsync -a --delete ~/personal/.config/wezterm/ ~/.config/wezterm/
+ls -a ~/.config/wezterm/
+
+## zsh
+echo "\nzsh"
+CUSTOM="$HOME/.oh-my-zsh/custom/aliases.zsh"
+rm "$CUSTOM"
+cp ~/personal/.config/zsh/aliases.zsh "$CUSTOM"
+source ~/.zshrc
+#ls -a $ZSH_CUSTOM/
+tail "$CUSTOM"
