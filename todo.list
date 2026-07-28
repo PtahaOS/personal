@@ -1,10 +1,9 @@
-- scale terminal
-- wezterm basics
-- right SUPER key whith keyd
+- wezterm basics scale terminal
+- zsh plugins(Autosuggestions & highlighting)
+- statusbar
 - hyprlauncher
 - wallpapper(hyprpapper)
-- statusbar
 
 - feachers(some hypr plugins maybe)
 - deep nvim
-- deep wezterm if needed
+- deep wezterm 

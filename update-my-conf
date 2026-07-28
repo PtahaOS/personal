@@ -16,8 +16,15 @@ ls -a ~/.config/wezterm/
 ## zsh
 echo "\nzsh"
 CUSTOM="$HOME/.oh-my-zsh/custom/aliases.zsh"
-rm "$CUSTOM"
-cp ~/personal/.config/zsh/aliases.zsh "$CUSTOM"
+rsync -a --delete ~/personal/.config/zsh/aliases.zsh "$CUSTOM"
+rsync -a --delete ~/personal/.config/zsh/.zshrc "$HOME/.zshrc"
 source ~/.zshrc
 #ls -a $ZSH_CUSTOM/
 tail "$CUSTOM"
+
+## keyd
+#echo "\nkeyd"   
+#sudo rsync -a --delete ~/personal/.config/keyd/default.conf /etc/keyd/default.conf
+#sudo systemctl enable --now keyd
+#sudo keyd reload
+#tail "/etc/keyd/default.conf"
