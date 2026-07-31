@@ -2,29 +2,27 @@
 
 ## hyprland
 echo "\nhyprland"
-rsync -a --delete ~/personal/.config/hypr/ ~/.config/hypr/
-#rm -r ~/.config/hypr/*
-#cp -r ~/personal/.config/hypr/* ~/.config/hypr/
-ls -a ~/.config/hypr/
+rsync -a --delete $HOME/personal/.config/hypr/ $HOME/.config/hypr/
+ls -a $HOME/.config/hypr/
 hyprctl reload
 
 ## wezterm
-echo "\nwezterm"
-rsync -a --delete ~/personal/.config/wezterm/ ~/.config/wezterm/
-ls -a ~/.config/wezterm/
+#echo "\nwezterm"
+#rsync -a --delete $HOME/personal/.config/wezterm/ $HOME/.config/wezterm/
+#ls -a $HOME/.config/wezterm/
 
 ## zsh
 echo "\nzsh"
 CUSTOM="$HOME/.oh-my-zsh/custom/aliases.zsh"
-rsync -a --delete ~/personal/.config/zsh/aliases.zsh "$CUSTOM"
-rsync -a --delete ~/personal/.config/zsh/.zshrc "$HOME/.zshrc"
-source ~/.zshrc
+rsync -a --delete $HOME/personal/.config/zsh/aliases.zsh "$CUSTOM"
+rsync -a --delete $HOME/personal/.config/zsh/.zshrc "$HOME/.zshrc"
+source $HOME/.zshrc
 #ls -a $ZSH_CUSTOM/
 tail "$CUSTOM"
 
 ## keyd
-#echo "\nkeyd"   
-#sudo rsync -a --delete ~/personal/.config/keyd/default.conf /etc/keyd/default.conf
-#sudo systemctl enable --now keyd
-#sudo keyd reload
-#tail "/etc/keyd/default.conf"
+echo "\nkeyd"   
+sudo rsync -a --delete $HOME/personal/.config/keyd/default.conf /etc/keyd/default.conf
+sudo systemctl enable --now keyd
+sudo keyd reload
+tail "/etc/keyd/default.conf"
