@@ -7,9 +7,9 @@ ls -a $HOME/.config/hypr/
 hyprctl reload
 
 ## wezterm
-#echo "\nwezterm"
-#rsync -a --delete $HOME/personal/.config/wezterm/ $HOME/.config/wezterm/
-#ls -a $HOME/.config/wezterm/
+echo "\nwezterm"
+rsync -a --delete $HOME/personal/.config/wezterm/ $HOME/.config/wezterm/
+ls -a $HOME/.config/wezterm/
 
 ## zsh
 echo "\nzsh"
@@ -21,8 +21,14 @@ source $HOME/.zshrc
 tail "$CUSTOM"
 
 ## keyd
-echo "\nkeyd"   
-sudo rsync -a --delete $HOME/personal/.config/keyd/default.conf /etc/keyd/default.conf
-sudo systemctl enable --now keyd
-sudo keyd reload
-tail "/etc/keyd/default.conf"
+#echo "\nkeyd"   
+#sudo rsync -a --delete $HOME/personal/.config/keyd/default.conf /etc/keyd/default.conf
+#sudo systemctl enable --now keyd
+#sudo keyd reload
+#tail "/etc/keyd/default.conf"
+
+## waybar
+echo "\nwaybar"
+rsync -a --delete $HOME/personal/.config/waybar/ $HOME/.config/waybar/
+pkill waybar
+waybar
