@@ -3,8 +3,8 @@
 ---------------------
 
 -- Set programs that you use
-local terminal    = "kitty"
-local fileManager = "dolphin"
+local terminal    = "wezterm"
+local fileManager = ""
 local menu        = "rofi -show drun"
 
 
@@ -46,5 +46,5 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 
 -- Custom
 hl.bind(mainMod .. " + SHIFT + F9", hl.dsp.exec_cmd("~/.local/bin/touchpad-toggle"))
---h1.bind("CAPS_LOCK", "SHIFT")
+hl.bind(mainMod .. "+ SHIFT + w", hl.dsp.exec_cmd("waybar"))
 

@@ -31,4 +31,9 @@ tail "$CUSTOM"
 echo "\nwaybar"
 rsync -a --delete $HOME/personal/.config/waybar/ $HOME/.config/waybar/
 pkill waybar
-waybar
+hyprctl dispatch "hl.dsp.exec_cmd('waybar')"
+
+## rofi
+echo "\nrofi"
+rsync -a --delete $HOME/personal/.config/rofi/ $HOME/.config/rofi/
+
