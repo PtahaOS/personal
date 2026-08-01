@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
 # paru
 git clone https://aur.archlinux.org/paru.git
