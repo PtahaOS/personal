@@ -45,5 +45,4 @@ hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
 hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 
 -- Custom
-hl.bind(mainMod .. "+ SHIFT + w", hl.dsp.exec_cmd("waybar"))
-
+hl.bind(mainMod .. "+ SHIFT + w", hl.dsp.exec_cmd("$HOME/.config/waybar/launch.sh"))

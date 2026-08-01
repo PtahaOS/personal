@@ -1,0 +1,39 @@
+{
+    "layer": "top",
+    "modules-left": [
+        "pulseaudio", 
+        "cava"
+    ],
+    "modules-center": [
+        "hyprland/workspaces"
+    ],
+    "modules-right": [
+        "battery", 
+        "clock"
+    ],
+    "battery": {
+        "format": "{capacity}% {icon}",
+        "format-icons": [
+            "", 
+            "", 
+            "", 
+            "", 
+            "",
+        ]
+    },
+    "clock": {
+        "format-alt": "{:%a, %d. %b  %H:%M}"
+    }
+    "hyprland/workspaces": {
+        "format": "{name}",
+        "format-icons": {
+            "1": "",
+            "2": "",
+            "3": "",
+            "4": "",
+            "5": "",
+            "active": "",
+            "default": ""
+        },
+    }
+}

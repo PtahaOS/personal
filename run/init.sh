@@ -19,3 +19,5 @@ sudo pacman -S --noconfirm --needed mesa  vulkan-intel
 
 # fonts
 sudo pacman -S --noconfirm --needed ttf-jetbrains-mono-nerd ttf-font-awesome
+sudo pacman -S --noconfirm --needed ttf-iosevka-nerd
+
