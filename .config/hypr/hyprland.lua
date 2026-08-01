@@ -82,9 +82,8 @@ hl.config({
 
 hl.config({
     misc = {
-        force_default_wallpaper = -1,    -- Set to 0 or 1 to disable the anime mascot wallpapers
-        disable_hyprland_logo = false, -- If true disables the random hyprland logo / anime girl background. :(
-	initial_workspace_tracking = 2,
+        force_default_wallpaper = 0,    -- Set to 0 or 1 to disable the anime mascot wallpapers
+        disable_hyprland_logo = true, -- If true disables the random hyprland logo / anime girl background. :(
     },
 })
 
@@ -183,5 +182,5 @@ hl.window_rule({
 
 xwayland = {
    force_zero_scsling = true,
-   use_nearest_neighbor = true,
+   use_nearest_neighbor = false,
 }
