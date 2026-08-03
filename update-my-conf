@@ -39,5 +39,5 @@ rsync -a --delete $HOME/personal/.config/rofi/ $HOME/.config/rofi/
 
 ## tmux
 echo "\ntmux"
-rsync -a --delete $HOME/personal/.config/tmux/ $HOME/.config/tmux/
+rsync -a --delete $HOME/personal/.config/tmux/tmux.conf $HOME/.config/tmux/tmux.conf
 tmux source-file $HOME/.config/tmux/tmux.conf

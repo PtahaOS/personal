@@ -1,0 +1,19 @@
+Флаг    Значение
+----    --------
+-g      Global — глобальная опция (самый частый в .tmux.conf)
+-s      Server — серверная опция
+-w      Window — оконная опция (то же, что setw)
+-p      Pane — опция панели
+-u      Unset — сбросить опцию
+-a      Append — добавить к существующему значению
+-o      Only if unset — установить только если ещё не задана
+-q      Quiet — не выдавать ошибку при неизвестной опции
+-F      Format — раскрывать форматы #{...} в значении
+-t      Target — указать конкретную сессию/окно/панель
+
+Флаг   Значение                                      Пример
+----   --------                                      ------
+-n     Без префикса (alias для -T root)              bind -n C-h select-pane -L
+-r     Клавиша может повторяться (repeat)            bind -r H resize-pane -L 5
+-T     Указать key-table                             bind -T copy-mode-vi v send -X begin-selection
+-N     Добавить заметку (note) к биндингу            bind -N "New window" c new-window

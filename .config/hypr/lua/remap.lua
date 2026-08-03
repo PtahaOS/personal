@@ -46,3 +46,4 @@ hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 
 -- Custom
 hl.bind(mainMod .. "+ SHIFT + w", hl.dsp.exec_cmd("$HOME/.config/waybar/launch.sh"))
+hl.bind(mainMod .. "+ SHIFT + F9", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/touchpad_toggle.sh start"))
