@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-sudo pacman -S --noconfirm --needed man okular 
+sudo pacman -S --noconfirm --needed pacman-contrib man okular 
 sudo pacman -S --noconfirm --needed zip unzip archlinux-xdg-menu
 sudo pacman -S --noconfirm --needed libreoffice rsync fzf base-devel
 

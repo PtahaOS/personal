@@ -70,18 +70,6 @@ window#waybar.empty #window {
   opacity: 0;
 }
 
-#mpris {
-  background-color: @base;
-  border-radius: 8px;
-  border: 1px solid alpha(@text, 0.15);
-  color: @love;
-  min-width: 16px;
-  margin: 0px 3px 0px 3px;
-  padding-left: 6px;
-  padding-right: 6px;
-}
-
-
 /* --- Tooltip ---*/
 tooltip {
   opacity: 1;
@@ -93,11 +81,13 @@ tooltip {
   background-color: @base;
   border-radius: 8px;
   border: 1px solid alpha(@text, 0.15);
+  padding: 0px 5px 0px 5px;
+  margin: 0px;
 }
 
 #workspaces button {
-  padding: 3px;
-  border-radius: 2px;
+  padding: 0px 10px 0px 10px;
+  margin: 0px 0px 0px 0px;
   background-color: transparent;
   color: @text;
   opacity: 1;
@@ -118,9 +108,6 @@ tooltip {
   color: @love;
 }
 
-
-/* --- General Modules --- */
-
 #tray,
 #window,
 #cpu,
@@ -131,31 +118,12 @@ tooltip {
 #backlight,
 #bluetooth,
 #pulseaudio,
-#custom-weather,
-#custom-update,
 #idle_inhibitor,
-#custom-idle-indicator,
-#custom-notification-silencing-indicator,
-#custom-omarchy,
-#custom-screenrecording-indicator,
 #custom-updatespacman {
   min-width: 16px;
   margin: 1px 3px 1px 3px;
   padding-left: 6px;
   padding-right: 6px;
-}
-
-#custom-update {
-  padding-left: 3px;
-}
-
-/* --- Module-Group-Colors --- */
-
-#custom-omarchy {
-  border-radius: 0;
-  border-right: 1px solid alpha(@text, 0.15);
-  color: @gold;
-  font-size: 14px;
 }
 
 #clock {
@@ -208,31 +176,6 @@ tooltip {
   color: @muted;
 }
 
-#custom-voxtype {
-  min-width: 12px;
-  margin: 0 0 0 7.5px;
-}
-
-#custom-voxtype.recording {
-  color: #a55555;
-}
-
-#custom-idle-indicator,
-#custom-notification-silencing-indicator {
-  min-width: 12px;
-  margin-left: 0;
-  margin-right: 0;
-  font-size: 12px;
-  padding-bottom: 1px;
-}
-
-#custom-idle-indicator.active,
-#custom-notification-silencing-indicator.active {
-  color: #a55555;
-}
-
-/* Specific Module */
-
 #tray > .needs-attention {
     -gtk-icon-effect: highlight;
     background-color: @transparent;
@@ -255,21 +198,6 @@ tooltip label {
     font-weight: normal;
 }
 
-
-/* Specific animation Module */
-
-#custom-screenrecording-indicator {
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-  color: transparent;
-}
-
-#custom-screenrecording-indicator.active {
-  color: @rose;
-  animation-name: blink-recording;
-  animation-duration: 0.5s;
-}
 
 @keyframes blink-recording {
     to {

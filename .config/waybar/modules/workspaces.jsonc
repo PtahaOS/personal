@@ -1,0 +1,41 @@
+{
+    "hyprland/workspaces": {
+        "format": "{icon}",
+        "on-click": "activate",
+        "format-window-separator": " ",
+        "persistent-workspaces": {
+            "*":5
+        },
+        "format-icons": {
+            "1": "",
+            "2": "",
+            "3": "",
+            "4": "",
+            "5": "",
+        }
+    },
+//    "hyprland/window": {
+//        "format": "{title} - {class}",
+//        "max-length": 85,
+//        "rewrite": {
+//            " - ": "", // if no window is focused, a single dash is displayed, this removes it
+//            "(.*?) - Chromium - chromium": "   $1 ",
+//            "(.*chrome)...(.*)": "   $1 ",
+//            "(.*) - Obsidian - .* - obsidian": "   $1 ",
+//            "(.*nvim)...(.*)": "   $2 ",
+//            "(.*code) - (.*)": " 󰨞  $1 ",
+//            "^.*btop( .*|$)": " 󰧨 BTOP $1 ",
+//            "^.*cmatrix( .*|$)": " 󰘨 MATRIX $1 ",
+//            "(.*) - Spotify": "  $1 ",
+//            "(.*) - com.mitchellh.ghostty": " 󰊠 $1 ",
+//            "(.*) - Alacritty": "   $1 ",
+//            "(.*) - BeeperTexts": " 󰻞  $1 ",
+//            "(.*Discord)...(.*).. (.*)": "   $2 ",
+//            "(.*) - org.gnome.Nautilus": " 󰣆  $1 ",
+//            "(.*) - fish": "   [$1] ",
+//            "(.*Steam)...(.*)": "   $1",
+//            "(.*imv)...(.*).. (.*)": "   $2",
+//            "(.*) - com.obsproject.Studio": "  $1 "
+//        }
+//    },
+}

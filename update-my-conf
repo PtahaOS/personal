@@ -37,3 +37,7 @@ hyprctl dispatch "hl.dsp.exec_cmd('waybar')"
 echo "\nrofi"
 rsync -a --delete $HOME/personal/.config/rofi/ $HOME/.config/rofi/
 
+## tmux
+echo "\ntmux"
+rsync -a --delete $HOME/personal/.config/tmux/ $HOME/.config/tmux/
+tmux source-file $HOME/.config/tmux/tmux.conf
