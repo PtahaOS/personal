@@ -41,3 +41,9 @@ rsync -a --delete $HOME/personal/.config/rofi/ $HOME/.config/rofi/
 echo "\ntmux"
 rsync -a --delete $HOME/personal/.config/tmux/tmux.conf $HOME/.config/tmux/tmux.conf
 tmux source-file $HOME/.config/tmux/tmux.conf
+
+## swaync
+echo "\nswaync"
+rsync -a --delete $HOME/personal/.config/swaync/ $HOME/.config/swaync/
+pkill swaync
+hyprctl dispatch "hl.dsp.exec_cmd('swaync')"

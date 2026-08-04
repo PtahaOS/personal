@@ -21,3 +21,5 @@ sudo pacman -S --noconfirm --needed mesa  vulkan-intel
 sudo pacman -S --noconfirm --needed ttf-jetbrains-mono-nerd ttf-font-awesome
 sudo pacman -S --noconfirm --needed ttf-iosevka-nerd
 
+# gtk
+sudo pacman -S --noconfirm --needed nwg-look

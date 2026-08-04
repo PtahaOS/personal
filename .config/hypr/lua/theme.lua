@@ -1,35 +1,47 @@
+-- rose-pine-moon colors
+local	base          = "#232136"
+local	surface       = "#2a273f"
+local	overlay       = "#393552"
+local	muted         = "#6e6a86"
+local	subtle        = "#908caa"
+local	text          = "#e0def4"
+local	love          = "#eb6f92"
+local	gold          = "#f6c177"
+local	rose          = "#ea9a97"
+local	pine          = "#3e8fb0"
+local	foam          = "#9ccfd8"
+local	iris          = "#c4a7e7"
+local	highlightLow  = "#2a283e"
+local	highlightMed  = "#44415a"
+local	highlightHigh = "#56526e"
 
------------------------
----- LOOK AND FEEL ----
------------------------
 
--- Refer to https://wiki.hypr.land/Configuring/Basics/Variables/
 hl.config({
     general = {
         gaps_in  = 5,
         gaps_out = 5,
-
         border_size = 2,
-
         col = {
-            active_border   = { colors = {"rgba(33ccffee)", "rgba(00ff99ee)"}, angle = 45 },
-            inactive_border = "rgba(595959aa)",
+            active_border = { 
+                colors = {
+                    rose,
+                    pine,
+                    love,
+                    iris
+                }, 
+                angle = 90 
+            },
+            inactive_border = muted,
         },
 
-        -- Set to true to enable resizing windows by clicking and dragging on borders and gaps
         resize_on_border = false,
-
-        -- Please see https://wiki.hypr.land/Configuring/Advanced-and-Cool/Tearing/ before you turn this on
         allow_tearing = false,
-
         layout = "dwindle",
     },
 
     decoration = {
         rounding       = 10,
         rounding_power = 2,
-
-        -- Change transparency of focused and unfocused windows
         active_opacity   = 1.0,
         inactive_opacity = 1.0,
 

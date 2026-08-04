@@ -7,18 +7,6 @@ paru -S --noconfirm --needed networkmanager-dmenu
 # app menu
 sudo pacman -S --noconfirm --needed rofi
 
-# notification
-sudo pacman -S --noconfirm --needed swaync 
-
-# Wallpapers
-sudo pacman -S --noconfirm --needed awww
-QUERY=$(awww query -a)
-if [ $QUERY='' ]; then
-    hyprctl eval 'hl.exec_cmd("awww-daemon")'
-fi
-awww img $HOME/personal/.config/hypr/wallpapers/wallpaper2.jpg
-echo "awww end"
-
 # rofi disable xgps and xgpspeed
 mkdir -p ~/.local/share/applications
 
@@ -35,3 +23,19 @@ NoDisplay=true
 EOF
 
 update-desktop-database ~/.local/share/applications
+
+# notification
+sudo pacman -S --noconfirm --needed swaync 
+
+# Wallpapers
+sudo pacman -S --noconfirm --needed awww
+QUERY=$(awww query -a)
+if [ $QUERY='' ]; then
+    hyprctl eval 'hl.exec_cmd("awww-daemon")'
+fi
+awww img $HOME/personal/.config/hypr/wallpapers/wallpaper2.jpg
+echo "awww end"
+
+# gtk
+paru -S --noconfirm --needed rose-pine-gtk-theme-full rose-pine-cursor
+

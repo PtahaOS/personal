@@ -5,7 +5,7 @@ hl.on("hyprland.start", function ()
     hl.exec_cmd("swaync")
     hl.exec_cmd("nm-applet")
     hl.exec_cmd("helium-browser")
-    hl.exec_cmd("$HOME/.config/hypr/scripts/touchpad_toggle.sh start")
+    hl.exec_cmd("$HOME/.config/hypr/scripts/touchpad_toggle.sh -s")
 end)
 
 hl.on("hyprland.shutdown", function()

@@ -1,4 +1,9 @@
 {
+    "include": [
+        "./modules/workspaces.jsonc",
+        "./modules/custom.jsonc"
+    ],
+
     "reload_style_on_change": true,
     "layer": "top",
     "position": "top",
@@ -39,18 +44,15 @@
     "group/right2": {
         "orientation": "inherit",
         "modules": [
-            "backlight",
-            "bluetooth",
+//            "bluetooth",
             "pulseaudio#output",
-            "network",
+//            "network",
             "memory",
             "cpu",
-            "battery"
+            "battery",
+            "custom/notification"
         ]
     },
-    "include": [
-        "./modules/workspaces.jsonc"
-    ],
 
     "cpu": {
         "interval": 2,
@@ -66,7 +68,6 @@
 
     "clock": {
         "format": " {:%H:%M %a} ",
-        "format-alt": " {:%d/%m/%Y  %H:%M:%S}",
         "tooltip-format": "<span>{calendar}</span>",
         "calendar": {
             "mode": "month",
@@ -79,7 +80,6 @@
                 "today": "<span color='#ff6699'><b>{}</b></span>"
             }
         },
-        "on-click-right": ""
     },
 
     "idle_inhibitor": {
@@ -90,26 +90,26 @@
         }
     },
 
-    "network": {
-        "format-wifi": "{icon}",
-        "format-ethernet": "",
-        "format-linked": "󱘖",
-        "format-disconnected": "󰤣",
-        "format-disabled": "󰤮",
-        "format-icons": [
-            "󰤯",
-            "󰤟",
-            "󰤢",
-            "󰤥",
-            "󰤨"
-        ],
-        "tooltip-format-disconnected": "No Connection",
-        "tooltip-format-disabled": "Wi-Fi is OFF",
-        "tooltip-format-wifi": "󱄙  {essid} ({signalStrength}%)\n\n󰐻  Freq: {frequency}GHz\n  {bandwidthDownBytes}   {bandwidthUpBytes}",
-        "tooltip-format-ethernet": "󰈀  {ifname} (Connected)\n  {bandwidthDownBytes}   {bandwidthUpBytes}",
-        "tooltip-format-linked": "󱘖 {ifname}: No IP Address",
-        "on-click": "hyprctl eval \"hl.exec_cmd('nm-connection-editor')\""  
-    },
+//    "network": {
+//        "format-wifi": "{icon}",
+//        "format-ethernet": "",
+//        "format-linked": "󱘖",
+//        "format-disconnected": "󰤣",
+//        "format-disabled": "󰤮",
+//        "format-icons": [
+//            "󰤯",
+//            "󰤟",
+//            "󰤢",
+//            "󰤥",
+//            "󰤨"
+//        ],
+//        "tooltip-format-disconnected": "No Connection",
+//        "tooltip-format-disabled": "Wi-Fi is OFF",
+//        "tooltip-format-wifi": "󱄙  {essid} ({signalStrength}%)\n\n󰐻  Freq: {frequency}GHz\n  {bandwidthDownBytes}   {bandwidthUpBytes}",
+//        "tooltip-format-ethernet": "󰈀  {ifname} (Connected)\n  {bandwidthDownBytes}   {bandwidthUpBytes}",
+//        "tooltip-format-linked": "󱘖 {ifname}: No IP Address",
+//        "on-click": "hyprctl eval \"hl.exec_cmd('nm-connection-editor')\""  
+//    },
 
         "battery": {
             "format": "{capacity}% {icon}",
@@ -154,14 +154,14 @@
         }
     },
 
-    "bluetooth": {
-        "format": "",
-        "format-disabled": "󰂲",
-        "format-off": "󰂲",
-        "format-connected": "󰂱",
-        "tooltip-format": "Devices connected: {num_connections}",
-        "on-click": "blueman-manager"
-    },
+//    "bluetooth": {
+//        "format": "",
+//        "format-disabled": "󰂲",
+//        "format-off": "󰂲",
+//        "format-connected": "󰂱",
+//        "tooltip-format": "Devices connected: {num_connections}",
+//        "on-click": "blueman-manager"
+//    },
 
     "pulseaudio#output": {
         "format": "{icon}",
