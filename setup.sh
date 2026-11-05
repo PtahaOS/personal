@@ -593,6 +593,7 @@ setup_autologin() {
     sudo rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf \
         /etc/systemd/system/plymouth-quit.service.d/retain.conf
     sudo systemctl disable getty@tty1.service || true
+    sudo systemctl enable getty@tty2.service || true
 
     if ! command -v start-hyprland >/dev/null; then
         warn "Нет start-hyprland. Автовход не включил, tty1 останется обычным."
@@ -612,8 +613,8 @@ EOF
     sudo tee /etc/systemd/system/hyprland-tty.service >/dev/null << EOF
 [Unit]
 Description=Hyprland on tty1
-After=systemd-user-sessions.service plymouth-start.service
-Conflicts=plymouth-quit.service getty@tty1.service
+After=systemd-user-sessions.service plymouth-quit.service
+Conflicts=getty@tty1.service
 OnFailure=hyprland-tty-fallback.service
 
 [Service]
@@ -630,9 +631,8 @@ WorkingDirectory=${HOME}
 Environment=XDG_SESSION_TYPE=wayland
 Environment=XDG_CURRENT_DESKTOP=Hyprland
 Environment=XDG_SESSION_DESKTOP=Hyprland
-ExecStartPre=-/usr/bin/plymouth deactivate
+ExecStartPre=-/usr/bin/plymouth quit
 ExecStart=/usr/bin/start-hyprland
-ExecStopPost=-/usr/bin/plymouth quit
 Restart=no
 
 [Install]
