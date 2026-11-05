@@ -63,7 +63,8 @@ fi
 export FAST_WORK_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/fsh"
 zinit light zdharma-continuum/fast-syntax-highlighting
 if [[ -r "${FAST_WORK_DIR}/rose-pine-moon.ini" ]]; then
-    fast-theme "${FAST_WORK_DIR}/rose-pine-moon.ini"
+    # fast-theme каждый раз пишет "Switched to theme". Тема и так запоминается.
+    fast-theme "${FAST_WORK_DIR}/rose-pine-moon.ini" >/dev/null
 fi
 
 unset LS_COLORS
