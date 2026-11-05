@@ -387,7 +387,7 @@ setup_grub_theme() {
     # Инсталлятор темы всегда спрашивает стиль в stdin, поэтому копируем сами:
     # Arch, 1080p, цветные иконки. /etc/default/grub целиком не заменяется.
     if ! pacman -Q grub &>/dev/null; then
-        warn "Пакет grub не установлен, тему Dark Matter ставить некуда."
+        warn "Пакет grub не установлен, тему меню ставить некуда."
         if [[ -f /boot/loader/loader.conf ]] || pacman -Q systemd-boot &>/dev/null; then
             warn "Загрузчик похож на systemd-boot, не GRUB."
         fi
@@ -402,26 +402,36 @@ setup_grub_theme() {
     local snippet="${PERSONAL_DIR}/system/grub/dark-matter.conf"
     [[ -f "${snippet}" ]] || { warn "Нет ${snippet}"; return 0; }
 
-    local cache="${XDG_CACHE_HOME:-${HOME}/.cache}/darkmatter-grub2-theme"
-    if [[ ! -d "${cache}/.git" ]]; then
-        mkdir -p "$(dirname "${cache}")"
-        git clone --depth 1 https://github.com/VandalByte/darkmatter-grub2-theme.git "${cache}" \
-            || { warn "Не скачал тему GRUB"; return 0; }
-    else
-        git -C "${cache}" pull --ff-only || warn "Не обновил клон темы GRUB, беру то что уже скачано"
-    fi
-    [[ -f "${cache}/base/1080p/theme.txt" ]] || { warn "В теме нет base/1080p/theme.txt"; return 0; }
+    local src="${PERSONAL_DIR}/system/grub/rose-pine-moon"
+    [[ -f "${src}/theme.txt" && -f "${src}/background.png" ]] || { warn "Нет темы ${src}"; return 0; }
 
-    local theme=/boot/grub/themes/darkmatter
-    log "GRUB Dark Matter → ${theme}"
+    local theme=/boot/grub/themes/rose-pine-moon
+    log "GRUB Rose Pine Moon → ${theme}"
     sudo install -d -m 755 "${theme}"
-    # /boot — FAT32. cp -a пытается сохранить владельца и падает:
-    # Operation not permitted. Копируем без ownership.
-    sudo cp "${cache}/assets/backgrounds/arch-1080p.png" "${theme}/background.png"
-    sudo rm -rf "${theme}/icons"
-    sudo cp -r "${cache}/assets/icons-1080p/color" "${theme}/icons"
-    sudo cp -r "${cache}/assets/fonts/1080p/." "${theme}/"
-    sudo cp -r "${cache}/base/1080p/." "${theme}/"
+    # /boot — FAT32, владельца не сохраняем.
+    sudo cp -r "${src}/." "${theme}/"
+
+    local font="" candidate
+    for candidate in \
+        /usr/share/fonts/TTF/DejaVuSans.ttf \
+        /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
+        /usr/share/fonts/dejavu/DejaVuSans.ttf
+    do
+        if [[ -f "${candidate}" ]]; then
+            font="${candidate}"
+            break
+        fi
+    done
+    if [[ -z "${font}" ]]; then
+        sudo pacman -S --noconfirm --needed ttf-dejavu || true
+        [[ -f /usr/share/fonts/TTF/DejaVuSans.ttf ]] && font=/usr/share/fonts/TTF/DejaVuSans.ttf
+    fi
+    if [[ -n "${font}" && -x /usr/bin/grub-mkfont ]]; then
+        sudo grub-mkfont -s 22 -o "${theme}/dejavu-22.pf2" "${font}"
+        sudo grub-mkfont -s 16 -o "${theme}/dejavu-16.pf2" "${font}"
+    else
+        warn "Нет grub-mkfont или DejaVu. Меню будет, но шрифт системный."
+    fi
     sudo chmod -R a+rX "${theme}" || true
 
     apply_grub_keys "${snippet}"
@@ -430,10 +440,10 @@ setup_grub_theme() {
     else
         warn "Нет grub-mkconfig"
     fi
-    if sudo test -f /boot/grub/grub.cfg && sudo grep -q 'darkmatter/theme.txt' /boot/grub/grub.cfg; then
-        log "В /boot/grub/grub.cfg тема darkmatter есть."
+    if sudo test -f /boot/grub/grub.cfg && sudo grep -q 'rose-pine-moon/theme.txt' /boot/grub/grub.cfg; then
+        log "В /boot/grub/grub.cfg тема rose-pine-moon есть."
     else
-        warn "В grub.cfg темы нет. Пришли: grep GRUB_THEME /etc/default/grub; ls /boot/grub/themes/darkmatter"
+        warn "В grub.cfg темы нет. Пришли: grep GRUB_THEME /etc/default/grub"
     fi
     setup_luks_before_grub
 }
@@ -937,7 +947,7 @@ main() {
   8. NVIDIA основная, встроенная на месте. ls -l /dev/dri/nvidia-dgpu /dev/dri/amd-igpu
      Steam не берёт 780M: DXVK_FILTER_DEVICE_NAME и VKD3D_FILTER_DEVICE_NAME.
      cat /sys/module/nvidia_drm/parameters/modeset должно быть Y.
-  9. GRUB: тема Dark Matter, стиль Arch, картинка 1080p, режим 1920x1200.
+  9. GRUB: меню Rose Pine Moon со знаком Arch, режим 1920x1200.
      Строка загрузки LUKS в /etc/default/grub не переписывается.
   10. Тема Rosé Pine Moon: GTK (rose-pine-moon-gtk + иконки), Qt через Kvantum,
      MangoHud, fzf. nvim не трогал. Подсветка zsh уже была Moon.
