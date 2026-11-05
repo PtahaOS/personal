@@ -56,6 +56,7 @@ PACMAN_DESKTOP=(
     xdg-desktop-portal-hyprland
     xdg-desktop-portal-gtk
     qt5-wayland qt6-wayland qt5ct qt6ct
+    kvantum
     waybar rofi swaync
     network-manager-applet
     hyprpolkitagent
@@ -88,8 +89,6 @@ AUR_PKGS=(
     rose-pine-cursor
     helium-bin
     protonup-qt
-    asusctl
-    supergfxctl
 )
 
 AUR_EXTRA=(
@@ -149,22 +148,29 @@ install_nvidia() {
 }
 
 setup_nvidia_primary() {
-    # Рендер только на NVIDIA. card0/card1 меняются между загрузками, поэтому симлинк.
-    log "NVIDIA primary: modeset, initramfs, симлинк /dev/dri/nvidia-dgpu"
+    # NVIDIA основная, iGPU не выключается. card0/card1 меняются между загрузками.
+    log "Симлинки /dev/dri/nvidia-dgpu и /dev/dri/amd-igpu"
     sudo tee /etc/modprobe.d/nvidia.conf >/dev/null << 'EOF'
 options nvidia_drm modeset=1
 options nvidia NVreg_PreserveVideoMemoryAllocations=1
 EOF
 
-    local id
-    id="$(lspci -nn -d 10de: | awk '/VGA|3D|Display/ { print $1; exit }')"
-    if [[ -z "${id}" ]]; then
-        warn "Не нашёл PCI-адрес NVIDIA, симлинк не создал"
-        return 0
+    local nvidia_id amd_id body=""
+    nvidia_id="$(lspci -nn -d 10de: | awk '/VGA|3D|Display/ { print $1; exit }')"
+    amd_id="$(lspci -nn -d 1002: | awk '/VGA|3D|Display/ { print $1; exit }')"
+    if [[ -n "${nvidia_id}" ]]; then
+        body+="KERNEL==\"card*\", KERNELS==\"0000:${nvidia_id}\", SUBSYSTEM==\"drm\", SUBSYSTEMS==\"pci\", SYMLINK+=\"dri/nvidia-dgpu\"
+"
+    else
+        warn "Не нашёл PCI-адрес NVIDIA, симлинк nvidia-dgpu не создал"
     fi
-    sudo tee /etc/udev/rules.d/99-nvidia-dgpu.rules >/dev/null << EOF
-KERNEL=="card*", KERNELS=="0000:${id}", SUBSYSTEM=="drm", SUBSYSTEMS=="pci", SYMLINK+="dri/nvidia-dgpu"
-EOF
+    if [[ -n "${amd_id}" ]]; then
+        body+="KERNEL==\"card*\", KERNELS==\"0000:${amd_id}\", SUBSYSTEM==\"drm\", SUBSYSTEMS==\"pci\", SYMLINK+=\"dri/amd-igpu\"
+"
+    else
+        warn "Не нашёл встроенную AMD. Если её нет, убери :/dev/dri/amd-igpu из environment.lua"
+    fi
+    printf '%s' "${body}" | sudo tee /etc/udev/rules.d/99-nvidia-dgpu.rules >/dev/null
     sudo udevadm control --reload
     sudo udevadm trigger --subsystem-match=drm || true
 
@@ -258,6 +264,9 @@ deploy_dotfiles() {
     sync_dir "${PERSONAL_DIR}/.config/gtk-3.0" "${HOME}/.config/gtk-3.0"
     sync_dir "${PERSONAL_DIR}/.config/gtk-4.0" "${HOME}/.config/gtk-4.0"
     sync_dir "${PERSONAL_DIR}/.config/fsh"     "${HOME}/.config/fsh"
+    sync_dir "${PERSONAL_DIR}/.config/Kvantum" "${HOME}/.config/Kvantum"
+    sync_dir "${PERSONAL_DIR}/.config/qt6ct"   "${HOME}/.config/qt6ct"
+    sync_dir "${PERSONAL_DIR}/.config/MangoHud" "${HOME}/.config/MangoHud"
     mkdir -p "${HOME}/.config/tmux"
     rsync -a "${PERSONAL_DIR}/.config/tmux/tmux.conf" "${HOME}/.config/tmux/tmux.conf"
     if [[ -d "${PERSONAL_DIR}/.config/tmux/cheat-sheet" ]]; then
@@ -308,36 +317,25 @@ setup_zsh() {
     fi
 }
 
-setup_supergfx() {
-    # FA608UP умеет MUX. AsusMuxDgpu делает NVIDIA единственной картой.
-    # Переключаем только если прошивка реально отдаёт этот режим.
-    # Сервис сейчас не перезапускаем: смена MUX в живой сессии гасит экран.
-    local conf="${PERSONAL_DIR}/system/supergfxd.conf"
-    [[ -f "${conf}" ]] || return 0
-    if ! command -v supergfxctl >/dev/null; then
-        warn "supergfxctl не установлен, MUX не трогаю"
-        return 0
+setup_gtk4_theme() {
+    # Libadwaita не смотрит gtk-theme-name. Ей нужен css рядом с settings.ini.
+    local css=/usr/share/themes/rose-pine-moon-gtk/gtk-4.0/gtk.css
+    [[ -f "${css}" ]] || return 0
+    mkdir -p "${HOME}/.config/gtk-4.0"
+    ln -sfn "${css}" "${HOME}/.config/gtk-4.0/gtk.css"
+    if [[ -d /usr/share/themes/rose-pine-moon-gtk/gtk-4.0/assets ]]; then
+        ln -sfn /usr/share/themes/rose-pine-moon-gtk/gtk-4.0/assets "${HOME}/.config/gtk-4.0/assets"
     fi
-    sudo systemctl enable supergfxd || true
-    if ! systemctl is-active --quiet supergfxd; then
-        if [[ -f /etc/supergfxd.conf ]] && grep -q 'AsusMuxDgpu' /etc/supergfxd.conf; then
-            warn "supergfxd не запущен, в конфиге уже AsusMuxDgpu. Не стартую сервис, чтобы не погасить экран."
-            warn "Режим включится при перезагрузке. Чёрный экран: BIOS Hybrid/Optimus, затем supergfxctl -m Hybrid"
-            return 0
-        fi
-        sudo systemctl start supergfxd || { warn "supergfxd не запустился"; return 0; }
+}
+
+restore_igpu() {
+    # Старый скрипт мог записать AsusMuxDgpu и выключить встроенную карту.
+    [[ -f /etc/supergfxd.conf ]] || return 0
+    if grep -q 'AsusMuxDgpu' /etc/supergfxd.conf; then
+        log "Возвращаю Hybrid: встроенная графика больше не выключается"
+        sudo sed -i 's/AsusMuxDgpu/Hybrid/g' /etc/supergfxd.conf
+        warn "Перезагрузись, чтобы iGPU снова появилась. Сервис сейчас не перезапускаю."
     fi
-    local modes
-    modes="$(supergfxctl -s 2>/dev/null || true)"
-    if ! grep -q 'AsusMuxDgpu' <<< "${modes}"; then
-        warn "Режима AsusMuxDgpu нет (${modes:-список пуст}). MUX не переключаю."
-        warn "Steam всё равно не возьмёт 780M: DXVK_FILTER_DEVICE_NAME и VKD3D_FILTER_DEVICE_NAME."
-        return 0
-    fi
-    log "MUX: копирую AsusMuxDgpu. Режим включится после перезагрузки, не сейчас."
-    sudo install -m 644 "${conf}" /etc/supergfxd.conf
-    warn "После перезагрузки дискретная NVIDIA станет основной."
-    warn "Чёрный экран: в BIOS верни Hybrid/Optimus, затем: supergfxctl -m Hybrid"
 }
 
 apply_grub_keys() {
@@ -506,11 +504,12 @@ cmd_dotfiles() {
     clone_or_pull "${PERSONAL_URL}" "${PERSONAL_DIR}"
     clone_or_pull "${NVIM_URL}" "${NVIM_DIR}"
     deploy_dotfiles
+    setup_gtk4_theme
     setup_zsh
     setup_keyd
     setup_tmux_plugins
     setup_autologin
-    setup_supergfx
+    restore_igpu
     setup_grub_theme
     setup_services
 }
@@ -543,22 +542,23 @@ main() {
      Новый терминал подхватит их. Ctrl-R — история atuin.
   6. Новые программы: допиши в PACMAN_EXTRA или AUR_EXTRA в этом файле
      и запусти ./setup.sh packages
-  7. NVIDIA: cat /sys/module/nvidia_drm/parameters/modeset должно быть Y,
-     ls -l /dev/dri/nvidia-dgpu должен существовать.
-     Steam не берёт 780M из-за фильтров DXVK/VKD3D в environment.lua.
-     Если supergfxctl показал AsusMuxDgpu, после перезагрузки iGPU выключится.
-     Чёрный экран ноутбука значит, что матрица осталась на AMD:
-     BIOS Discrete, либо в environment.lua строка с nvidia-dgpu:/dev/dri/amd-igpu.
+  7. NVIDIA основная, встроенная на месте. ls -l /dev/dri/nvidia-dgpu /dev/dri/amd-igpu
+     Steam не берёт 780M: DXVK_FILTER_DEVICE_NAME и VKD3D_FILTER_DEVICE_NAME.
+     cat /sys/module/nvidia_drm/parameters/modeset должно быть Y.
   8. GRUB: тема Dark Matter, стиль Arch, картинка 1080p, режим 1920x1200.
      Строка загрузки LUKS в /etc/default/grub не переписывается.
+  9. Тема Rosé Pine Moon: GTK (rose-pine-moon-gtk + иконки), Qt через Kvantum,
+     MangoHud, fzf. nvim не трогал. Подсветка zsh уже была Moon.
 
 Не ставил vulkan-intel: у тебя AMD CPU + NVIDIA, этот пакет был в старом init.sh по ошибке.
 wezterm берётся из Extra, а не wezterm-git: не надо компилировать Rust-терминал полчаса.
 oh-my-zsh больше не ставится. chsh всегда с именем пользователя (старый zsh.sh менял root).
 nvidia-utils ставится только если карта или модуль уже есть.
 keyd входит в пакеты, раньше скрипт включал сервис и не ставил пакет.
-Скрипт сам собирает только то, чего нет в репе: симлинк /dev/dri/nvidia-dgpu,
-копия темы GRUB в /boot и вписывание ключей из system/grub/dark-matter.conf.
+iGPU не отключается. Если прошлый запуск записал AsusMuxDgpu, скрипт возвращает Hybrid.
+Скрипт сам собирает только то, чего нет в репе: симлинки /dev/dri/*,
+ссылку gtk-4.0/gtk.css на тему из пакета, копию темы GRUB в /boot
+и ключи из system/grub/dark-matter.conf.
 EOF
 }
 

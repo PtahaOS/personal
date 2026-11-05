@@ -13,6 +13,9 @@ source "${ZINIT_HOME}/zinit.zsh"
 unset LS_COLORS
 unset EZA_COLORS
 
+# fzf вне меню tab. Цвета fzf-tab заданы ниже отдельно и эту переменную не читают.
+export FZF_DEFAULT_OPTS='--color=fg:#e0def4,bg:#232136,hl:#c4a7e7,fg+:#e0def4,bg+:#393552,hl+:#9ccfd8,info:#908caa,prompt:#c4a7e7,pointer:#eb6f92,marker:#f6c177,spinner:#9ccfd8,header:#6e6a86,border:#6e6a86'
+
 HISTSIZE=100000
 SAVEHIST=100000
 HISTFILE="${HOME}/.zsh_history"
