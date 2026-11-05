@@ -7,6 +7,7 @@
 #   ./setup.sh              всё: пакеты, репозитории, конфиги, сервисы
 #   ./setup.sh packages     только пакеты (paru, pacman, AUR, rust)
 #   ./setup.sh dotfiles     только клон реп и раскладка конфигов
+#   ./setup.sh wallpaper    поставить wallpaper2.jpg через awww
 #
 # Добавить программу потом:
 #   допиши имя пакета в PACMAN_EXTRA или AUR_EXTRA ниже и запусти ./setup.sh packages
@@ -374,21 +375,7 @@ apply_grub_keys() {
 
 cleanup_stale() {
     # Только то, что раньше написал этот сетап и что теперь мешает.
-    # Чужие конфиги не трогаем.
-    local profile="${HOME}/.zprofile"
-    if [[ -f "${profile}" ]] && grep -q '# ptaha-autologin' "${profile}"; then
-        log "Убираю старый автологин из ~/.zprofile (zsh его не читает)"
-        awk '
-            /^# ptaha-autologin$/ { skip = 1; next }
-            skip && /^fi$/ { skip = 0; next }
-            skip { next }
-            { print }
-        ' "${profile}" > "${profile}.tmp"
-        mv "${profile}.tmp" "${profile}"
-        if ! grep -q '[^[:space:]]' "${profile}"; then
-            rm -f "${profile}"
-        fi
-    fi
+    # ~/.zprofile не трогаем: туда же пишется автозапуск Hyprland.
     if [[ -d "${HOME}/.oh-my-zsh" ]]; then
         log "Удаляю ~/.oh-my-zsh: оболочка на zinit, каталог больше не нужен"
         rm -rf "${HOME}/.oh-my-zsh"
@@ -432,13 +419,18 @@ setup_grub_theme() {
     sudo cp -a "${cache}/assets/icons-1080p/color" "${theme}/icons"
     sudo cp -a "${cache}/assets/fonts/1080p/." "${theme}/"
     sudo cp -a "${cache}/base/1080p/." "${theme}/"
-    sudo chmod -R a+rX "${theme}"
+    sudo chmod -R a+rX "${theme}" || true
 
     apply_grub_keys "${snippet}"
     if [[ -x /usr/bin/grub-mkconfig ]]; then
         sudo grub-mkconfig -o /boot/grub/grub.cfg || warn "grub-mkconfig не прошёл, тема на диске есть, меню могло не обновиться"
     else
         warn "Нет grub-mkconfig"
+    fi
+    if [[ -f /boot/grub/grub.cfg ]] && grep -q 'darkmatter/theme.txt' /boot/grub/grub.cfg; then
+        log "В /boot/grub/grub.cfg тема darkmatter есть. Видна после перезагрузки, пароль LUKS по-прежнему текстом."
+    else
+        warn "В grub.cfg темы нет. Пришли: grep GRUB_THEME /etc/default/grub; ls /boot/grub/themes/darkmatter"
     fi
 }
 
@@ -488,6 +480,13 @@ setup_color_scheme() {
 setup_autologin() {
     [[ "${AUTOLOGIN}" == "1" ]] || return 0
     log "Автологин на tty1 и запуск Hyprland"
+    local dm
+    for dm in sddm gdm lightdm greetd ly lxdm; do
+        if systemctl is-enabled "${dm}.service" &>/dev/null; then
+            log "Выключаю ${dm}: он показывает свой экран входа вместо tty1"
+            sudo systemctl disable "${dm}.service" || true
+        fi
+    done
     sudo install -d /etc/systemd/system/getty@tty1.service.d
     sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null << EOF
 [Service]
@@ -495,22 +494,37 @@ ExecStart=
 ExecStart=-/usr/bin/agetty --autologin ${USER} --noclear %I \$TERM
 EOF
     sudo systemctl daemon-reload
+    sudo systemctl enable getty@tty1.service
 
-    # ZDOTDIR=~/.config/zsh, поэтому ~/.zprofile zsh не читает.
-    local marker="# ptaha-autologin"
-    local profile="${HOME}/.config/zsh/.zprofile"
-    mkdir -p "${HOME}/.config/zsh"
-    if [[ -f "${profile}" ]] && grep -q "${marker}" "${profile}"; then
-        :
-    else
-        cat > "${profile}" << EOF
-${marker}
-# zsh с ZDOTDIR читает именно этот файл, не ~/.zprofile.
-if [ -z "\${WAYLAND_DISPLAY}" ] && [ "\$(tty)" = "/dev/tty1" ]; then
-    exec Hyprland
-fi
-EOF
+    if command -v zsh >/dev/null; then
+        local zsh_bin
+        zsh_bin="$(command -v zsh)"
+        if [[ "${SHELL}" != "${zsh_bin}" ]]; then
+            sudo chsh -s "${zsh_bin}" "${USER}" || warn "Не сменил оболочку на zsh"
+        fi
     fi
+
+    # Пишем в оба файла. zsh читает ровно один:
+    # ~/.config/zsh/.zprofile, если ZDOTDIR задан в ~/.zshenv, иначе ~/.zprofile.
+    local marker="# ptaha-autologin"
+    local body profile
+    body="${marker}
+if [ -z \"\${WAYLAND_DISPLAY}\" ] && [ \"\$(tty)\" = \"/dev/tty1\" ]; then
+    exec Hyprland
+fi"
+    mkdir -p "${HOME}/.config/zsh"
+    for profile in "${HOME}/.config/zsh/.zprofile" "${HOME}/.zprofile" "${HOME}/.bash_profile"; do
+        if [[ -f "${profile}" ]] && grep -q "${marker}" "${profile}"; then
+            awk -v marker="${marker}" '
+                $0 == marker { skip = 1; next }
+                skip && $0 == "fi" { skip = 0; next }
+                skip { next }
+                { print }
+            ' "${profile}" > "${profile}.tmp"
+            mv "${profile}.tmp" "${profile}"
+        fi
+        printf '\n%s\n' "${body}" >> "${profile}"
+    done
 }
 
 setup_services() {
@@ -663,12 +677,29 @@ cmd_packages() {
     rebuild_initramfs_if_ucode
 }
 
+setup_wallpaper() {
+    local img="${HOME}/.config/hypr/wallpapers/wallpaper2.jpg"
+    [[ -f "${img}" ]] || { warn "Нет ${img}"; return 0; }
+    command -v awww >/dev/null || { warn "Нет awww. Сначала ./setup.sh packages"; return 0; }
+    if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
+        warn "Не Wayland-сессия. Обои встанут при входе в Hyprland."
+        return 0
+    fi
+    log "Ставлю обои ${img}"
+    if ! awww query >/dev/null 2>&1; then
+        awww-daemon &
+        sleep 0.4
+    fi
+    awww img "${img}" || warn "awww не смог поставить обои"
+}
+
 cmd_dotfiles() {
     need_user
     clone_or_pull "${PERSONAL_URL}" "${PERSONAL_DIR}"
     clone_or_pull "${NVIM_URL}" "${NVIM_DIR}"
     deploy_dotfiles
     cleanup_stale
+    setup_wallpaper
     setup_gtk4_theme
     setup_color_scheme
     setup_zsh
@@ -685,12 +716,13 @@ main() {
     case "${mode}" in
         packages) cmd_packages ;;
         dotfiles) cmd_dotfiles ;;
+        wallpaper) setup_wallpaper ;;
         all|"")
             cmd_packages
             cmd_dotfiles
             ;;
         *)
-            die "Неизвестный режим: ${mode}. Используй: packages | dotfiles | all"
+            die "Неизвестный режим: ${mode}. Используй: packages | dotfiles | wallpaper | all"
             ;;
     esac
 
