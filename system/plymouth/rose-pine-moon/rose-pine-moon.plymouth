@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Rose Pine Moon
+Description=Dark Rose Pine Moon prompt for the LUKS password
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/rose-pine-moon
+ScriptFile=/usr/share/plymouth/themes/rose-pine-moon/rose-pine-moon.script
