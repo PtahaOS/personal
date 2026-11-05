@@ -1,37 +1,72 @@
-// Rose Pine Moon. Только конструкции, которые Plymouth уже умеет в чужих темах.
-screen.w = Window.GetWidth(0);
-screen.h = Window.GetHeight(0);
-screen.half.w = screen.w / 2;
-screen.half.h = screen.h / 2;
+// Экран пароля LUKS: знак Arch и поле ввода, цвета Rose Pine Moon.
+// Надписи "rose pine" нет.
+
+screen.w = Window.GetWidth();
+screen.h = Window.GetHeight();
 
 Window.SetBackgroundTopColor(0.137, 0.129, 0.212);
 Window.SetBackgroundBottomColor(0.137, 0.129, 0.212);
 
-title.image = Image.Text("rose pine", 0.769, 0.655, 0.906);
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+
+title.image = Image.Text("Arch Linux", 0.878, 0.871, 0.957);
 title.sprite = Sprite(title.image);
-title.sprite.SetX(screen.half.w - title.image.GetWidth() / 2);
-title.sprite.SetY(screen.half.h - 40);
 
-bullets = null;
-bullet.image = Image.Text("*", 0.769, 0.655, 0.906);
-prompt_done = 0;
+entry.image = Image("entry.png");
+entry.sprite = Sprite(entry.image);
 
-fun DisplayPasswordCallback(nil, bulletCount) {
-    if (prompt_done == 0) {
-        label.image = Image.Text("password", 0.878, 0.871, 0.957);
-        label.sprite = Sprite(label.image);
-        label.sprite.SetX(screen.half.w - label.image.GetWidth() / 2);
-        label.sprite.SetY(screen.half.h + 8);
-        prompt_done = 1;
+hint.image = Image.Text("Password", 0.565, 0.541, 0.667);
+hint.sprite = Sprite(hint.image);
+
+bullet.image = Image("bullet.png");
+bullet.sprites = null;
+bullet.count = 0;
+
+fun place() {
+    logo.sprite.SetX(screen.w / 2 - logo.image.GetWidth() / 2);
+    logo.sprite.SetY(screen.h / 2 - 170);
+
+    title.sprite.SetX(screen.w / 2 - title.image.GetWidth() / 2);
+    title.sprite.SetY(logo.sprite.GetY() + logo.image.GetHeight() + 8);
+
+    entry.x = screen.w / 2 - entry.image.GetWidth() / 2;
+    entry.y = title.sprite.GetY() + title.image.GetHeight() + 28;
+    entry.sprite.SetX(entry.x);
+    entry.sprite.SetY(entry.y);
+
+    hint.sprite.SetX(entry.x + 22);
+    hint.sprite.SetY(entry.y + entry.image.GetHeight() / 2 - hint.image.GetHeight() / 2);
+}
+
+place();
+
+fun hide_bullets() {
+    for (i = 0; i < bullet.count; i++) {
+        bullet.sprites[i].SetOpacity(0);
+    }
+}
+
+fun DisplayPasswordCallback(prompt, bullet_count) {
+    hide_bullets();
+    if (bullet_count > 0) {
+        hint.sprite.SetOpacity(0);
+    } else {
+        hint.sprite.SetOpacity(1);
     }
 
-    totalWidth = bulletCount * bullet.image.GetWidth();
-    startPos = screen.half.w - totalWidth / 2;
-    bullets = null;
-    for (i = 0; i < bulletCount; i++) {
-        bullets[i].sprite = Sprite(bullet.image);
-        bullets[i].sprite.SetX(startPos + i * bullet.image.GetWidth());
-        bullets[i].sprite.SetY(screen.half.h + 40);
+    y = entry.y + entry.image.GetHeight() / 2 - bullet.image.GetHeight() / 2;
+    x = entry.x + 22;
+    for (i = 0; i < bullet_count; i++) {
+        if (!bullet.sprites[i]) {
+            bullet.sprites[i] = Sprite(bullet.image);
+        }
+        bullet.sprites[i].SetX(x + i * 18);
+        bullet.sprites[i].SetY(y);
+        bullet.sprites[i].SetOpacity(1);
+    }
+    if (bullet_count > bullet.count) {
+        bullet.count = bullet_count;
     }
 }
 
