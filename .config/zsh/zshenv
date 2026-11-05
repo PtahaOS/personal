@@ -1,0 +1,2 @@
+# zsh читает этот файл из $HOME до ZDOTDIR. Дальше все файлы оболочки лежат в ~/.config/zsh.
+export ZDOTDIR="${HOME}/.config/zsh"
