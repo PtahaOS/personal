@@ -89,8 +89,8 @@ AUR_PKGS=(
     awww
     rose-pine-gtk-theme-full
     rose-pine-cursor
-    helium-bin
-    protonup-qt
+    helium-browser-bin
+    protonup-qt-bin
 )
 
 AUR_EXTRA=(
