@@ -24,6 +24,14 @@ hl.monitor({
 })
 
 hl.config({
+    general = {
+        -- Лента как в niri, не dwindle. Новое окно справа.
+        layout = "scrolling",
+    },
+})
+
+-- dwindle оставлен, если захочешь вернуть: general.layout = "dwindle"
+hl.config({
     dwindle = {
         preserve_split = true, -- You probably want this
         force_split = 0, -- 0 мышь, 1 влево, 2 вправо. 3 Hyprland не принимает.
@@ -37,9 +45,12 @@ hl.config({
     },
 })
 
--- See https://wiki.hypr.land/Configuring/Layouts/Scrolling-Layout/ for more
+-- Колонка = полэкрана. Третье окно сталкивает первое влево за край.
+-- Одно окно на весь экран, со второго каждое справа на половину.
 hl.config({
     scrolling = {
+        column_width = 0.5,
+        direction = "right",
         fullscreen_on_one_column = true,
     },
 })
