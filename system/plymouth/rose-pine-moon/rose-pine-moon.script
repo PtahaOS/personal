@@ -34,9 +34,11 @@ fun place() {
     entry.y = title.sprite.GetY() + title.image.GetHeight() + 28;
     entry.sprite.SetX(entry.x);
     entry.sprite.SetY(entry.y);
+    entry.sprite.SetOpacity(0);
 
     hint.sprite.SetX(entry.x + 22);
     hint.sprite.SetY(entry.y + entry.image.GetHeight() / 2 - hint.image.GetHeight() / 2);
+    hint.sprite.SetOpacity(0);
 }
 
 place();
@@ -48,6 +50,7 @@ fun hide_bullets() {
 }
 
 fun DisplayPasswordCallback(prompt, bullet_count) {
+    entry.sprite.SetOpacity(1);
     hide_bullets();
     if (bullet_count > 0) {
         hint.sprite.SetOpacity(0);
