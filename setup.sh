@@ -81,8 +81,8 @@ PACMAN_DESKTOP=(
 )
 
 PACMAN_EXTRA=(
-    # сюда свои пакеты из pacman, по одному на строку:
-    # fastfetch
+    gimp
+    imv
 )
 
 # AUR. Новое — в AUR_EXTRA.
@@ -276,6 +276,10 @@ deploy_dotfiles() {
     sync_dir "${PERSONAL_DIR}/.config/qt6ct"   "${HOME}/.config/qt6ct"
     sync_dir "${PERSONAL_DIR}/.config/MangoHud" "${HOME}/.config/MangoHud"
     sync_dir "${PERSONAL_DIR}/.config/xdg-desktop-portal" "${HOME}/.config/xdg-desktop-portal"
+    if [[ -f "${PERSONAL_DIR}/.config/mimeapps.list" ]]; then
+        mkdir -p "${HOME}/.config"
+        rsync -a "${PERSONAL_DIR}/.config/mimeapps.list" "${HOME}/.config/mimeapps.list"
+    fi
     mkdir -p "${HOME}/.config/tmux"
     rsync -a "${PERSONAL_DIR}/.config/tmux/tmux.conf" "${HOME}/.config/tmux/tmux.conf"
     if [[ -d "${PERSONAL_DIR}/.config/tmux/cheat-sheet" ]]; then
