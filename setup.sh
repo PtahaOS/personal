@@ -428,9 +428,95 @@ setup_grub_theme() {
         warn "Нет grub-mkconfig"
     fi
     if [[ -f /boot/grub/grub.cfg ]] && grep -q 'darkmatter/theme.txt' /boot/grub/grub.cfg; then
-        log "В /boot/grub/grub.cfg тема darkmatter есть. Видна после перезагрузки, пароль LUKS по-прежнему текстом."
+        log "В /boot/grub/grub.cfg тема darkmatter есть."
     else
         warn "В grub.cfg темы нет. Пришли: grep GRUB_THEME /etc/default/grub; ls /boot/grub/themes/darkmatter"
+    fi
+    setup_luks_before_grub
+}
+
+setup_luks_before_grub() {
+    # Меню до пароля значит: ядро и grub.cfg лежат вне LUKS.
+    # Поменять порядок можно только если /boot уже внутри зашифрованного корня.
+    local root_src boot_src boot_fstype
+    root_src="$(findmnt -no SOURCE / 2>/dev/null || true)"
+    boot_src="$(findmnt -no SOURCE /boot 2>/dev/null || true)"
+    boot_fstype="$(findmnt -no FSTYPE /boot 2>/dev/null || true)"
+    root_src="${root_src%%\[*}"
+    boot_src="${boot_src%%\[*}"
+    [[ -n "${boot_src}" ]] || boot_src="${root_src}"
+
+    if [[ "${root_src}" != /dev/mapper/* && "${root_src}" != /dev/dm-* ]]; then
+        warn "Корень не на LUKS (${root_src:-не найден}). Порядок GRUB и пароля не меняю."
+        return 0
+    fi
+    if [[ "${boot_fstype}" == "vfat" || ( -n "${boot_src}" && "${boot_src}" != "${root_src}" && "${boot_src}" != /dev/mapper/* && "${boot_src}" != /dev/dm-* ) ]]; then
+        warn "/boot (${boot_src}, ${boot_fstype}) не зашифрован, ядро лежит там."
+        warn "Пока так, GRUB всегда раньше LUKS. Перенос /boot внутрь диска из скрипта не делаю: ошибка оставит ноутбук без загрузки."
+        return 0
+    fi
+
+    log "Пароль LUKS будет до меню GRUB"
+    if grep -qE '^[[:space:]]*#?[[:space:]]*GRUB_ENABLE_CRYPTODISK=' /etc/default/grub; then
+        sudo sed -i -E 's|^[[:space:]]*#?[[:space:]]*GRUB_ENABLE_CRYPTODISK=.*|GRUB_ENABLE_CRYPTODISK=y|' /etc/default/grub
+    else
+        echo 'GRUB_ENABLE_CRYPTODISK=y' | sudo tee -a /etc/default/grub >/dev/null
+    fi
+
+    local efi="" candidate
+    for candidate in /efi /boot/efi /boot; do
+        if [[ -d "${candidate}/EFI" ]]; then
+            efi="${candidate}"
+            break
+        fi
+    done
+    if [[ -z "${efi}" ]]; then
+        warn "Не нашёл EFI-раздел (/efi, /boot/efi или /boot/EFI). grub-install не запускаю."
+        return 0
+    fi
+    sudo grub-install --target=x86_64-efi --efi-directory="${efi}" --bootloader-id=GRUB --recheck \
+        || { warn "grub-install не прошёл. Пароль до меню мог не включиться."; return 0; }
+
+    add_luks_keyfile "${root_src}" || warn "Второй пароль LUKS (уже в системе) может остаться"
+
+    if [[ -x /usr/bin/grub-mkconfig ]]; then
+        sudo grub-mkconfig -o /boot/grub/grub.cfg || warn "grub-mkconfig после cryptodisk не прошёл"
+    fi
+}
+
+add_luks_keyfile() {
+    # Ключ кладём в initramfs, чтобы после меню пароль не спрашивали ещё раз.
+    # Вызывать только когда /boot внутри LUKS: иначе ключ лежал бы открытым.
+    local root_src="$1" mapper dev uuid key
+    mapper="${root_src#/dev/mapper/}"
+    dev="$(sudo cryptsetup status "${mapper}" 2>/dev/null | awk '/device:/ {print $2; exit}')"
+    [[ -n "${dev}" ]] || { warn "cryptsetup status ${mapper} не дал диск"; return 0; }
+    uuid="$(sudo cryptsetup luksUUID "${dev}" 2>/dev/null || true)"
+    [[ -n "${uuid}" ]] || { warn "Нет UUID у ${dev}"; return 0; }
+
+    if grep -q 'sd-encrypt' /etc/mkinitcpio.conf 2>/dev/null; then
+        key="/etc/cryptsetup-keys.d/${uuid}.key"
+        sudo install -d -m 700 /etc/cryptsetup-keys.d
+    else
+        key="/crypto_keyfile.bin"
+    fi
+
+    if [[ ! -f "${key}" ]]; then
+        sudo dd if=/dev/urandom of="${key}" bs=512 count=8 iflag=fullblock status=none
+        sudo chmod 000 "${key}"
+        log "Один раз введи текущий пароль LUKS, чтобы добавить ключ для initramfs"
+        sudo cryptsetup luksAddKey "${dev}" "${key}" || { sudo rm -f "${key}"; warn "Слот ключа не добавлен"; return 0; }
+    fi
+
+    if ! grep -qF "${key}" /etc/mkinitcpio.conf; then
+        sudo sed -i -E "s|^FILES=\\((.*)\\)|FILES=(\\1 ${key})|" /etc/mkinitcpio.conf
+        sudo sed -i -E 's|^FILES=\( |FILES=(|' /etc/mkinitcpio.conf
+    fi
+    if ! grep -q 'sd-encrypt' /etc/mkinitcpio.conf && ! grep -q 'cryptkey=rootfs:' /etc/default/grub; then
+        sudo sed -i -E "s|^(GRUB_CMDLINE_LINUX=\")|\\1cryptkey=rootfs:${key} |" /etc/default/grub
+    fi
+    if [[ -x /usr/bin/mkinitcpio ]]; then
+        sudo mkinitcpio -P || warn "mkinitcpio -P не прошёл, второй пароль может остаться"
     fi
 }
 
