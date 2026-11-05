@@ -596,7 +596,7 @@ EOF
     local body profile
     body="${marker}
 if [ -z \"\${WAYLAND_DISPLAY}\" ] && [ \"\$(tty)\" = \"/dev/tty1\" ]; then
-    exec Hyprland
+    exec start-hyprland
 fi"
     mkdir -p "${HOME}/.config/zsh"
     for profile in "${HOME}/.config/zsh/.zprofile" "${HOME}/.zprofile" "${HOME}/.bash_profile"; do
