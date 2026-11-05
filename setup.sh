@@ -183,7 +183,7 @@ EOF
         return 0
     fi
     local mod
-    for mod in nvidia nvidia_modeset nvidia_uvm nvidia_drm; do
+    for mod in amdgpu nvidia nvidia_modeset nvidia_uvm nvidia_drm; do
         if grep -Eq "^MODULES=\\(.*\\b${mod}\\b" /etc/mkinitcpio.conf; then
             continue
         fi
@@ -771,7 +771,7 @@ setup_plymouth() {
     # Plymouth рисует его. cryptdevice и хук encrypt не трогаем, только
     # вставляем plymouth перед encrypt и слово splash в командную строку.
     log "Экран пароля LUKS: Plymouth, Rose Pine Moon"
-    sudo pacman -S --noconfirm --needed plymouth \
+    sudo pacman -S --noconfirm --needed plymouth ttf-dejavu \
         || { warn "plymouth не поставился"; return 0; }
 
     local src="${PERSONAL_DIR}/system/plymouth/rose-pine-moon"
@@ -781,19 +781,46 @@ setup_plymouth() {
         /usr/share/plymouth/themes/rose-pine-moon/
     sudo plymouth-set-default-theme rose-pine-moon \
         || warn "Не переключил тему Plymouth"
+    printf '%s\n' '[Daemon]' 'Theme=rose-pine-moon' 'ShowDelay=0' 'DeviceTimeout=8' \
+        | sudo tee /etc/plymouth/plymouthd.conf >/dev/null
 
-    if [[ -f /etc/mkinitcpio.conf ]] && ! grep -Eq '^HOOKS=.*[[:space:]]plymouth[[:space:]]' /etc/mkinitcpio.conf; then
-        if grep -Eq '^HOOKS=.*[[:space:]](sd-encrypt|encrypt)([[:space:]]|\))' /etc/mkinitcpio.conf; then
-            sudo sed -i -E 's/^(HOOKS=\(.*)[[:space:]](sd-encrypt|encrypt)/\1 plymouth \2/' /etc/mkinitcpio.conf
-        else
-            warn "В HOOKS нет encrypt. Plymouth не вставил, чтобы не остаться без диска."
+    # UKI не читает GRUB_CMDLINE. splash должен лежать в /etc/kernel/cmdline,
+    # иначе plymouthd не забирает экран и пароль остаётся белым текстом.
+    local cmdline_file=/etc/kernel/cmdline cmdline="" flag
+    if [[ -f "${cmdline_file}" ]]; then
+        cmdline="$(tr '\n' ' ' < "${cmdline_file}")"
+    elif [[ -r /proc/cmdline ]]; then
+        cmdline="$(cat /proc/cmdline)"
+    fi
+    for flag in quiet splash nvidia-drm.modeset=1; do
+        if [[ " ${cmdline} " != *" ${flag} "* ]]; then
+            cmdline="${cmdline} ${flag}"
         fi
+    done
+    cmdline="${cmdline#"${cmdline%%[![:space:]]*}"}"
+    cmdline="${cmdline%"${cmdline##*[![:space:]]}"}"
+    if [[ "${cmdline}" != *cryptdevice* && "${cmdline}" != *rd.luks* ]]; then
+        warn "В командной строке ядра нет cryptdevice. Файл ${cmdline_file} не трогаю, иначе диск не откроется."
+    else
+        printf '%s\n' "${cmdline}" | sudo tee "${cmdline_file}" >/dev/null
+        log "Командная строка UKI: ${cmdline}"
     fi
 
-    if [[ -f /etc/mkinitcpio.conf ]] && ! grep -Eq '^HOOKS=.*[[:space:]]kms[[:space:]]' /etc/mkinitcpio.conf; then
-        if grep -Eq '^HOOKS=.*[[:space:]]plymouth[[:space:]]' /etc/mkinitcpio.conf; then
-            sudo sed -i -E 's/^(HOOKS=\(.*)[[:space:]]plymouth/\1 kms plymouth/' /etc/mkinitcpio.conf
+    if [[ -f /etc/mkinitcpio.conf ]]; then
+        local hooks inner
+        hooks="$(grep -E '^HOOKS=' /etc/mkinitcpio.conf | head -1 || true)"
+        inner="${hooks#HOOKS=(}"
+        inner="${inner%)}"
+        inner="${inner//plymouth/}"
+        if [[ "${inner}" == *kms* ]]; then
+            inner="${inner/kms/kms plymouth}"
+        elif [[ "${inner}" == *encrypt* ]]; then
+            inner="${inner/encrypt/plymouth encrypt}"
         fi
+        inner="$(echo "${inner}" | tr -s ' ')"
+        inner="${inner#"${inner%%[![:space:]]*}"}"
+        inner="${inner%"${inner##*[![:space:]]}"}"
+        sudo sed -i -E "s|^HOOKS=.*|HOOKS=(${inner})|" /etc/mkinitcpio.conf
     fi
 
     local grub=/etc/default/grub key=GRUB_CMDLINE_LINUX_DEFAULT line value flag
