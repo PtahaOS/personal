@@ -1,17 +1,15 @@
 # Конфиг целиком здесь. setup.sh его только копирует и ничего в нём не дописывает.
-export ZSH="$HOME/.oh-my-zsh"
+# Плагины: zinit, atuin, fzf-tab, fast-syntax-highlighting. Oh My Zsh нет. Starship нет.
 
-# Промпт задан ниже, тема Oh My Zsh не нужна. Starship нет.
-ZSH_THEME=""
+# --- zinit -----------------------------------------------------------------
+typeset -g ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+if [[ ! -f "${ZINIT_HOME}/zinit.zsh" ]]; then
+    command mkdir -p "${ZINIT_HOME:h}"
+    command git clone --depth 1 https://github.com/zdharma-continuum/zinit.git "${ZINIT_HOME}"
+fi
+source "${ZINIT_HOME}/zinit.zsh"
 
-plugins=(
-    git
-    zsh-autosuggestions
-)
-
-source "$ZSH/oh-my-zsh.sh"
-
-# Oh My Zsh ставит LS_COLORS, а он важнее ~/.config/eza/theme.yml.
+# eza читает ~/.config/eza/theme.yml. LS_COLORS его перекрывает.
 unset LS_COLORS
 unset EZA_COLORS
 
@@ -21,34 +19,41 @@ HISTFILE="${HOME}/.zsh_history"
 setopt APPEND_HISTORY INC_APPEND_HISTORY SHARE_HISTORY EXTENDED_HISTORY
 setopt HIST_IGNORE_DUPS HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS
 
-source "${HOME}/.config/zsh/aliases.zsh"
+[[ -r "${HOME}/.config/zsh/aliases.zsh" ]] && source "${HOME}/.config/zsh/aliases.zsh"
 
-# Rosé Pine Moon
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6e6a86'
-typeset -A ZSH_HIGHLIGHT_STYLES
-ZSH_HIGHLIGHT_STYLES[default]='fg=#e0def4'
-ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#eb6f92,bold'
-ZSH_HIGHLIGHT_STYLES[reserved-word]='fg=#c4a7e7'
-ZSH_HIGHLIGHT_STYLES[alias]='fg=#9ccfd8'
-ZSH_HIGHLIGHT_STYLES[suffix-alias]='fg=#9ccfd8'
-ZSH_HIGHLIGHT_STYLES[builtin]='fg=#3e8fb0'
-ZSH_HIGHLIGHT_STYLES[function]='fg=#3e8fb0'
-ZSH_HIGHLIGHT_STYLES[command]='fg=#9ccfd8'
-ZSH_HIGHLIGHT_STYLES[precommand]='fg=#c4a7e7'
-ZSH_HIGHLIGHT_STYLES[commandseparator]='fg=#908caa'
-ZSH_HIGHLIGHT_STYLES[path]='fg=#f6c177'
-ZSH_HIGHLIGHT_STYLES[globbing]='fg=#ea9a97'
-ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#f6c177'
-ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#f6c177'
-ZSH_HIGHLIGHT_STYLES[comment]='fg=#6e6a86'
+# --- промпт Rosé Pine Moon, без git_prompt_info из Oh My Zsh ---------------
+autoload -Uz vcs_info
+setopt PROMPT_SUBST
+zstyle ':vcs_info:*' enable git
+zstyle ':vcs_info:git:*' check-for-changes true
+zstyle ':vcs_info:git:*' unstagedstr '*'
+zstyle ':vcs_info:git:*' stagedstr ''
+zstyle ':vcs_info:git:*' formats '%F{#6e6a86}(%F{#c4a7e7}%b%F{#eb6f92}%u%F{#6e6a86}) '
+zstyle ':vcs_info:git:*' actionformats '%F{#6e6a86}(%F{#c4a7e7}%b|%a%F{#eb6f92}%u%F{#6e6a86}) '
+_ptaha_vcs_precmd() { vcs_info }
+precmd_functions+=(_ptaha_vcs_precmd)
+PROMPT='%F{#9ccfd8}%~%f ${vcs_info_msg_0_}%F{#c4a7e7}❯%f '
 
-PROMPT='%F{#9ccfd8}%~%f $(git_prompt_info)%F{#c4a7e7}❯%f '
-ZSH_THEME_GIT_PROMPT_PREFIX="%F{#6e6a86}(%F{#c4a7e7}"
-ZSH_THEME_GIT_PROMPT_SUFFIX="%F{#6e6a86}) "
-ZSH_THEME_GIT_PROMPT_DIRTY="%F{#eb6f92}*"
-ZSH_THEME_GIT_PROMPT_CLEAN=""
+# --- completion, затем fzf-tab, затем atuin --------------------------------
+# fzf-tab обязан стоять после compinit и до fast-syntax-highlighting.
+mkdir -p "${HOME}/.cache/zsh"
+autoload -Uz compinit
+compinit -u -d "${HOME}/.cache/zsh/zcompdump"
 
-# Подсветка синтаксиса должна быть последней, иначе ломаются виджеты zsh.
-if [[ -r "${HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
-    source "${HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+zstyle ':fzf-tab:*' fzf-flags '--color=fg:#e0def4,bg:#232136,hl:#c4a7e7,fg+:#e0def4,bg+:#393552,hl+:#9ccfd8,info:#908caa,prompt:#c4a7e7,pointer:#eb6f92,marker:#f6c177,spinner:#9ccfd8,header:#6e6a86'
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --icons=auto --color=always $realpath'
+zinit light Aloxaf/fzf-tab
+
+if (( $+commands[atuin] )); then
+    eval "$(atuin init zsh)"
 fi
+
+# Подсветка последней: она оборачивает виджеты строки.
+export FAST_WORK_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/fsh"
+zinit light zdharma-continuum/fast-syntax-highlighting
+if [[ -r "${FAST_WORK_DIR}/rose-pine-moon.ini" ]]; then
+    fast-theme "${FAST_WORK_DIR}/rose-pine-moon.ini"
+fi
+
+unset LS_COLORS
+unset EZA_COLORS

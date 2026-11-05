@@ -14,9 +14,11 @@ require("lua.environment")
 ------------------
 
 -- See https://wiki.hypr.land/Configuring/Basics/Monitors/
+-- FA608UP: 1920x1200, до 165 Гц.
+-- Если после перехода на NVIDIA имя выхода уже не eDP-1, смотри `hyprctl monitors`.
 hl.monitor({
     output   = "eDP-1",
-    mode     = "1920x1080@60",
+    mode     = "1920x1200@165",
     position = "0x0",
     scale    = "1",
 })

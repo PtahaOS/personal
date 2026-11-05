@@ -38,7 +38,7 @@ PACMAN_BASE=(
     base-devel git curl wget rsync unzip zip
     pacman-contrib man-db man-pages
     fzf
-    zsh eza keyd
+    zsh eza atuin keyd
     pciutils
 )
 
@@ -88,6 +88,8 @@ AUR_PKGS=(
     rose-pine-cursor
     helium-bin
     protonup-qt
+    asusctl
+    supergfxctl
 )
 
 AUR_EXTRA=(
@@ -255,6 +257,7 @@ deploy_dotfiles() {
     sync_dir "${PERSONAL_DIR}/.config/eza"     "${HOME}/.config/eza"
     sync_dir "${PERSONAL_DIR}/.config/gtk-3.0" "${HOME}/.config/gtk-3.0"
     sync_dir "${PERSONAL_DIR}/.config/gtk-4.0" "${HOME}/.config/gtk-4.0"
+    sync_dir "${PERSONAL_DIR}/.config/fsh"     "${HOME}/.config/fsh"
     mkdir -p "${HOME}/.config/tmux"
     rsync -a "${PERSONAL_DIR}/.config/tmux/tmux.conf" "${HOME}/.config/tmux/tmux.conf"
     if [[ -d "${PERSONAL_DIR}/.config/tmux/cheat-sheet" ]]; then
@@ -277,7 +280,7 @@ deploy_dotfiles() {
 }
 
 setup_zsh() {
-    log "zsh + oh-my-zsh"
+    log "zsh + zinit"
     if ! command -v zsh >/dev/null; then
         die "Нет zsh. Сначала ./setup.sh packages"
     fi
@@ -289,24 +292,107 @@ setup_zsh() {
         log "Оболочка входа сменена на zsh. Заработает после выхода из сессии."
     fi
 
-    if [[ ! -d "${HOME}/.oh-my-zsh" ]]; then
-        RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
-            sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    local zinit="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+    if [[ ! -d "${zinit}/.git" ]]; then
+        mkdir -p "$(dirname "${zinit}")"
+        git clone --depth 1 https://github.com/zdharma-continuum/zinit.git "${zinit}"
     fi
 
-    local name dest
-    mkdir -p "${HOME}/.oh-my-zsh/custom/plugins"
-    for name in zsh-autosuggestions zsh-syntax-highlighting; do
-        dest="${HOME}/.oh-my-zsh/custom/plugins/${name}"
-        if [[ ! -d "${dest}/.git" ]]; then
-            git clone --depth 1 "https://github.com/zsh-users/${name}" "${dest}"
-        fi
-    done
-
-    # Раньше скрипт дописывал оболочку поверх репы. Эти файлы больше не нужны
-    # и перебивали бы ~/.config/zsh/.zshrc.
+    # Раньше скрипт дописывал оболочку поверх репы. Эти файлы больше не нужны.
     rm -f "${HOME}/.oh-my-zsh/custom/rose-pine-moon.zsh" \
           "${HOME}/.oh-my-zsh/custom/aliases.zsh"
+
+    # Плагины zinit качаются при первом интерактивном запуске нового .zshrc.
+    if [[ -f "${HOME}/.config/zsh/.zshrc" ]]; then
+        zsh -ic 'exit' || warn "Первый запуск zsh не докачал плагины. Открой новый терминал."
+    fi
+}
+
+setup_supergfx() {
+    # FA608UP умеет MUX. AsusMuxDgpu делает NVIDIA единственной картой.
+    # Переключаем только если прошивка реально отдаёт этот режим.
+    # Сервис сейчас не перезапускаем: смена MUX в живой сессии гасит экран.
+    local conf="${PERSONAL_DIR}/system/supergfxd.conf"
+    [[ -f "${conf}" ]] || return 0
+    if ! command -v supergfxctl >/dev/null; then
+        warn "supergfxctl не установлен, MUX не трогаю"
+        return 0
+    fi
+    sudo systemctl enable supergfxd || true
+    if ! systemctl is-active --quiet supergfxd; then
+        if [[ -f /etc/supergfxd.conf ]] && grep -q 'AsusMuxDgpu' /etc/supergfxd.conf; then
+            warn "supergfxd не запущен, в конфиге уже AsusMuxDgpu. Не стартую сервис, чтобы не погасить экран."
+            warn "Режим включится при перезагрузке. Чёрный экран: BIOS Hybrid/Optimus, затем supergfxctl -m Hybrid"
+            return 0
+        fi
+        sudo systemctl start supergfxd || { warn "supergfxd не запустился"; return 0; }
+    fi
+    local modes
+    modes="$(supergfxctl -s 2>/dev/null || true)"
+    if ! grep -q 'AsusMuxDgpu' <<< "${modes}"; then
+        warn "Режима AsusMuxDgpu нет (${modes:-список пуст}). MUX не переключаю."
+        warn "Steam всё равно не возьмёт 780M: DXVK_FILTER_DEVICE_NAME и VKD3D_FILTER_DEVICE_NAME."
+        return 0
+    fi
+    log "MUX: копирую AsusMuxDgpu. Режим включится после перезагрузки, не сейчас."
+    sudo install -m 644 "${conf}" /etc/supergfxd.conf
+    warn "После перезагрузки дискретная NVIDIA станет основной."
+    warn "Чёрный экран: в BIOS верни Hybrid/Optimus, затем: supergfxctl -m Hybrid"
+}
+
+apply_grub_keys() {
+    local snippet="$1" file=/etc/default/grub
+    [[ -f "${file}" ]] || { warn "Нет ${file}, ключи GRUB не пишу"; return 0; }
+    local line key value
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        [[ "${line}" =~ ^[[:space:]]*(#|$) ]] && continue
+        [[ "${line}" == *=* ]] || continue
+        key="${line%%=*}"
+        value="${line#*=}"
+        [[ -n "${key}" ]] || continue
+        if grep -qE "^[[:space:]]*#?[[:space:]]*${key}=" "${file}"; then
+            sudo sed -i -E "s|^[[:space:]]*#?[[:space:]]*${key}=.*|${key}=${value}|" "${file}"
+        else
+            printf '%s=%s\n' "${key}" "${value}" | sudo tee -a "${file}" >/dev/null
+        fi
+    done < "${snippet}"
+    if grep -qE '^[[:space:]]*GRUB_TERMINAL_OUTPUT=.*console' "${file}"; then
+        sudo sed -i -E 's|^([[:space:]]*GRUB_TERMINAL_OUTPUT=.*)|#\1|' "${file}"
+    fi
+}
+
+setup_grub_theme() {
+    # Инсталлятор темы всегда спрашивает стиль в stdin, поэтому копируем сами:
+    # Arch, 1080p, цветные иконки. /etc/default/grub целиком не заменяется.
+    [[ -d /boot/grub ]] || { warn "Нет /boot/grub (возможно systemd-boot), тему GRUB не ставлю"; return 0; }
+    local snippet="${PERSONAL_DIR}/system/grub/dark-matter.conf"
+    [[ -f "${snippet}" ]] || { warn "Нет ${snippet}"; return 0; }
+
+    local cache="${XDG_CACHE_HOME:-${HOME}/.cache}/darkmatter-grub2-theme"
+    if [[ ! -d "${cache}/.git" ]]; then
+        mkdir -p "$(dirname "${cache}")"
+        git clone --depth 1 https://github.com/VandalByte/darkmatter-grub2-theme.git "${cache}"
+    else
+        git -C "${cache}" pull --ff-only || warn "Не обновил клон темы GRUB, беру то что уже скачано"
+    fi
+    [[ -f "${cache}/base/1080p/theme.txt" ]] || { warn "В теме нет base/1080p/theme.txt"; return 0; }
+
+    local theme=/boot/grub/themes/darkmatter
+    log "GRUB Dark Matter → ${theme}"
+    sudo install -d -m 755 "${theme}"
+    sudo cp -a "${cache}/assets/backgrounds/arch-1080p.png" "${theme}/background.png"
+    sudo rm -rf "${theme}/icons"
+    sudo cp -a "${cache}/assets/icons-1080p/color" "${theme}/icons"
+    sudo cp -a "${cache}/assets/fonts/1080p/." "${theme}/"
+    sudo cp -a "${cache}/base/1080p/." "${theme}/"
+    sudo chmod -R a+rX "${theme}"
+
+    apply_grub_keys "${snippet}"
+    if [[ -x /usr/bin/grub-mkconfig ]]; then
+        sudo grub-mkconfig -o /boot/grub/grub.cfg || warn "grub-mkconfig не прошёл, тема на диске есть, меню могло не обновиться"
+    else
+        warn "Нет grub-mkconfig"
+    fi
 }
 
 setup_keyd() {
@@ -419,11 +505,13 @@ cmd_dotfiles() {
     need_user
     clone_or_pull "${PERSONAL_URL}" "${PERSONAL_DIR}"
     clone_or_pull "${NVIM_URL}" "${NVIM_DIR}"
-    setup_zsh
     deploy_dotfiles
+    setup_zsh
     setup_keyd
     setup_tmux_plugins
     setup_autologin
+    setup_supergfx
+    setup_grub_theme
     setup_services
 }
 
@@ -451,18 +539,26 @@ main() {
   3. Открой nvim один раз и дождись, пока lazy.nvim скачает плагины,
      потом :Mason чтобы докачались lua_ls, rust_analyzer, clangd.
   4. В tmux нажми Ctrl-b затем I, если тема rose-pine не встала сама.
-  5. Оболочка, eza, GTK и SUPER+E берутся из файлов репы как есть.
-     Скрипт их не переписывает.
+  5. Оболочка: zinit, atuin, fzf-tab, fast-syntax-highlighting.
+     Новый терминал подхватит их. Ctrl-R — история atuin.
   6. Новые программы: допиши в PACMAN_EXTRA или AUR_EXTRA в этом файле
      и запусти ./setup.sh packages
+  7. NVIDIA: cat /sys/module/nvidia_drm/parameters/modeset должно быть Y,
+     ls -l /dev/dri/nvidia-dgpu должен существовать.
+     Steam не берёт 780M из-за фильтров DXVK/VKD3D в environment.lua.
+     Если supergfxctl показал AsusMuxDgpu, после перезагрузки iGPU выключится.
+     Чёрный экран ноутбука значит, что матрица осталась на AMD:
+     BIOS Discrete, либо в environment.lua строка с nvidia-dgpu:/dev/dri/amd-igpu.
+  8. GRUB: тема Dark Matter, стиль Arch, картинка 1080p, режим 1920x1200.
+     Строка загрузки LUKS в /etc/default/grub не переписывается.
 
 Не ставил vulkan-intel: у тебя AMD CPU + NVIDIA, этот пакет был в старом init.sh по ошибке.
 wezterm берётся из Extra, а не wezterm-git: не надо компилировать Rust-терминал полчаса.
-oh-my-zsh больше не меняет оболочку root (старый zsh.sh делал chsh без имени пользователя).
+oh-my-zsh больше не ставится. chsh всегда с именем пользователя (старый zsh.sh менял root).
 nvidia-utils ставится только если карта или модуль уже есть.
 keyd входит в пакеты, раньше скрипт включал сервис и не ставил пакет.
-Единственное, что скрипт собирает сам, а не копирует: симлинк /dev/dri/nvidia-dgpu.
-Адрес PCI на каждой машине свой, в репу его не положить.
+Скрипт сам собирает только то, чего нет в репе: симлинк /dev/dri/nvidia-dgpu,
+копия темы GRUB в /boot и вписывание ключей из system/grub/dark-matter.conf.
 EOF
 }
 
