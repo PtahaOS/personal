@@ -530,8 +530,9 @@ cmd_packages() {
         pkgs+=(steam gamemode lib32-gamemode gamescope mangohud lib32-mangohud)
     fi
     if [[ "${INSTALL_BATTLENET}" == "1" ]]; then
-        # Лаунчер 32-битный. Без lib32 Battle.net падает ещё до логина.
-        # wine-staging не ставим: он конфликтует с wine, раннер всё равно GE-Proton.
+        # Лаунчер 32-битный, раннер — GE-Proton: свои библиотеки уже внутри.
+        # Эти lib32 Arch убрал из multilib, pacman из-за них валит всю установку:
+        # giflib, mpg123, openal, v4l-utils, libxslt, gst-plugins-base-libs.
         pkgs+=(
             lutris
             umu-launcher
@@ -540,12 +541,12 @@ cmd_packages() {
             vkd3d lib32-vkd3d
             vulkan-icd-loader lib32-vulkan-icd-loader vulkan-tools
             gnutls lib32-gnutls
-            giflib lib32-giflib
+            giflib
             libpng lib32-libpng
             libldap lib32-libldap
-            mpg123 lib32-mpg123
-            openal lib32-openal
-            v4l-utils lib32-v4l-utils
+            mpg123
+            openal
+            v4l-utils
             libpulse lib32-libpulse
             alsa-plugins lib32-alsa-plugins
             alsa-lib lib32-alsa-lib
@@ -554,10 +555,10 @@ cmd_packages() {
             libxcomposite lib32-libxcomposite
             libxinerama lib32-libxinerama
             ncurses lib32-ncurses
-            libxslt lib32-libxslt
+            libxslt
             libva lib32-libva
             gtk3 lib32-gtk3
-            gst-plugins-base-libs lib32-gst-plugins-base-libs
+            gst-plugins-base-libs
             cabextract
         )
     fi
