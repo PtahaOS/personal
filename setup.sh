@@ -617,7 +617,8 @@ EOF
     local body profile
     body="${marker}
 if [ -z \"\${WAYLAND_DISPLAY}\" ] && [ \"\$(tty)\" = \"/dev/tty1\" ]; then
-    exec start-hyprland
+    # pam_systemd даёт cap_wake_alarm. С ней bwrap не стартует и glycin не декодирует иконки.
+    exec setpriv --ambient-caps -all --inh-caps -all -- start-hyprland
 fi"
     mkdir -p "${HOME}/.config/zsh"
     for profile in "${HOME}/.config/zsh/.zprofile" "${HOME}/.zprofile" "${HOME}/.bash_profile"; do

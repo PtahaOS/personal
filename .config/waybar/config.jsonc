@@ -35,15 +35,12 @@
         "group/left3",
     ],
     "modules-center": ["hyprland/window"],
-    "modules-right": ["group/right1", "group/right2"],
+    "modules-right": ["group/right2"],
 
-    "group/right1": {
-        "orientation": "inherit",
-        "modules": ["tray"]
-    },
     "group/right2": {
         "orientation": "inherit",
         "modules": [
+            "tray",
 //            "bluetooth",
             "pulseaudio#output",
 //            "network",
@@ -173,11 +170,11 @@
         "max-volume": 100,
         "scroll-step": 5,
         "smooth-scrolling-threshold": 1,
-        "on-click": "pavucontrol",
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-click-right": ""
     },
     "tray": {
-        "icon-size": 20,
-        "spacing": 10,
+        "icon-size": 18,
+        "spacing": 8
     }
 }

@@ -5,7 +5,8 @@
 -- Set programs that you use
 local terminal    = "wezterm"
 local fileManager = "thunar"
-local menu        = "rofi -show drun"
+-- cap_wake_alarm от pam_systemd роняет bwrap, и rofi не может декодировать иконки.
+local menu        = "setpriv --ambient-caps -all --inh-caps -all -- rofi -show drun"
 
 
 ---------------------
