@@ -821,8 +821,19 @@ setup_plymouth() {
     fi
 
     if [[ -x /usr/bin/mkinitcpio ]]; then
-        log "Пересобираю initramfs для экрана пароля. Это несколько минут."
+        log "Пересобираю UKI: /boot/EFI/Linux/arch-linux.efi. Это несколько минут."
         sudo mkinitcpio -P || warn "mkinitcpio -P не прошёл. Пароль останется текстом."
+    fi
+    local uki="/boot/EFI/Linux/arch-linux.efi"
+    if [[ -f /etc/mkinitcpio.d/linux.preset ]]; then
+        local preset_uki
+        preset_uki="$(sed -nE 's/^default_uki="([^"]+)".*/\1/p' /etc/mkinitcpio.d/linux.preset | head -1)"
+        [[ -n "${preset_uki}" ]] && uki="${preset_uki}"
+    fi
+    if sudo test -f "${uki}" && sudo lsinitcpio "${uki}" | grep -q plymouth; then
+        log "Plymouth есть в ${uki}. После перезагрузки пароль будет на тёмном экране."
+    else
+        warn "В ${uki} нет Plymouth. Пароль останется белым текстом."
     fi
 }
 
