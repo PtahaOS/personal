@@ -790,9 +790,15 @@ setup_plymouth() {
         fi
     fi
 
+    if [[ -f /etc/mkinitcpio.conf ]] && ! grep -Eq '^HOOKS=.*[[:space:]]kms[[:space:]]' /etc/mkinitcpio.conf; then
+        if grep -Eq '^HOOKS=.*[[:space:]]plymouth[[:space:]]' /etc/mkinitcpio.conf; then
+            sudo sed -i -E 's/^(HOOKS=\(.*)[[:space:]]plymouth/\1 kms plymouth/' /etc/mkinitcpio.conf
+        fi
+    fi
+
     local grub=/etc/default/grub key=GRUB_CMDLINE_LINUX_DEFAULT line value flag
     if [[ -f "${grub}" ]]; then
-        for flag in quiet splash; do
+        for flag in quiet splash nvidia-drm.modeset=1; do
             line="$(grep -E "^${key}=" "${grub}" || true)"
             if [[ -z "${line}" ]]; then
                 echo "${key}=\"${flag}\"" | sudo tee -a "${grub}" >/dev/null
@@ -808,7 +814,7 @@ setup_plymouth() {
             value="${value#"${value%%[![:space:]]*}"}"
             sudo sed -i -E "s|^${key}=.*|${key}=\"${value}\"|" "${grub}"
         done
-        if [[ -x /usr/bin/grub-mkconfig && -d /boot/grub ]]; then
+        if [[ -x /usr/bin/grub-mkconfig ]] && sudo test -d /boot/grub; then
             sudo grub-mkconfig -o /boot/grub/grub.cfg \
                 || warn "grub-mkconfig для splash не прошёл"
         fi
