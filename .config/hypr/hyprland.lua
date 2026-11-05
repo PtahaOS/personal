@@ -26,7 +26,7 @@ hl.monitor({
 hl.config({
     dwindle = {
         preserve_split = true, -- You probably want this
-	force_split = 3,
+        force_split = 0, -- 0 мышь, 1 влево, 2 вправо. 3 Hyprland не принимает.
     },
 })
 
