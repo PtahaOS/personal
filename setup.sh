@@ -368,16 +368,45 @@ apply_grub_keys() {
     fi
 }
 
+cleanup_stale() {
+    # Только то, что раньше написал этот сетап и что теперь мешает.
+    # Чужие конфиги не трогаем.
+    local profile="${HOME}/.zprofile"
+    if [[ -f "${profile}" ]] && grep -q '# ptaha-autologin' "${profile}"; then
+        log "Убираю старый автологин из ~/.zprofile (zsh его не читает)"
+        awk '
+            /^# ptaha-autologin$/ { skip = 1; next }
+            skip && /^fi$/ { skip = 0; next }
+            skip { next }
+            { print }
+        ' "${profile}" > "${profile}.tmp"
+        mv "${profile}.tmp" "${profile}"
+        if ! grep -q '[^[:space:]]' "${profile}"; then
+            rm -f "${profile}"
+        fi
+    fi
+    if [[ -d "${HOME}/.oh-my-zsh" ]]; then
+        log "Удаляю ~/.oh-my-zsh: оболочка на zinit, каталог больше не нужен"
+        rm -rf "${HOME}/.oh-my-zsh"
+    fi
+}
+
 setup_grub_theme() {
     # Инсталлятор темы всегда спрашивает стиль в stdin, поэтому копируем сами:
     # Arch, 1080p, цветные иконки. /etc/default/grub целиком не заменяется.
-    [[ -d /boot/grub ]] || {
-        warn "Нет /boot/grub. Тема Dark Matter ставится только на GRUB."
-        if [[ -f /boot/loader/loader.conf ]]; then
-            warn "Сейчас загрузчик systemd-boot, не GRUB. Тему на него этот скрипт не вешает."
+    if ! pacman -Q grub &>/dev/null; then
+        warn "Пакет grub не установлен, тему Dark Matter ставить некуда."
+        if [[ -f /boot/loader/loader.conf ]] || pacman -Q systemd-boot &>/dev/null; then
+            warn "Загрузчик похож на systemd-boot, не GRUB."
         fi
+        warn "Проверка: pacman -Q grub; ls -d /boot/grub /boot/loader 2>/dev/null; efibootmgr"
         return 0
-    }
+    fi
+    if [[ ! -d /boot/grub ]]; then
+        warn "Пакет grub есть, но каталога /boot/grub нет. Тему не копирую."
+        warn "Посмотри: ls /boot /efi /boot/efi 2>/dev/null; bootctl status"
+        return 0
+    fi
     local snippet="${PERSONAL_DIR}/system/grub/dark-matter.conf"
     [[ -f "${snippet}" ]] || { warn "Нет ${snippet}"; return 0; }
 
@@ -635,6 +664,7 @@ cmd_dotfiles() {
     clone_or_pull "${PERSONAL_URL}" "${PERSONAL_DIR}"
     clone_or_pull "${NVIM_URL}" "${NVIM_DIR}"
     deploy_dotfiles
+    cleanup_stale
     setup_gtk4_theme
     setup_color_scheme
     setup_zsh
