@@ -1,6 +1,6 @@
 [Plymouth Theme]
 Name=Rose Pine Moon
-Description=Dark Rose Pine Moon prompt for the LUKS password
+Description=Arch Linux unlock screen in Rose Pine Moon colors
 ModuleName=script
 
 [script]
