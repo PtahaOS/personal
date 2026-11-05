@@ -1,4 +1,5 @@
-# Тот же экран, что и пароль LUKS: тёмный Rose Pine Moon и знак Arch.
+# Как Breeze: шапка, рамка выбранного пункта, полоса таймера.
+# Цвета Rose Pine Moon. Картинка 1920x1200.
 desktop-image: "background.png"
 desktop-color: "#232136"
 terminal-font: "DejaVu Sans Regular 16"
@@ -9,28 +10,41 @@ message-color: "#908caa"
 message-bg-color: "#232136"
 
 + boot_menu {
-    left = 30%
-    top = 56%
-    width = 40%
-    height = 30%
+    left = 27%
+    top = 30%
+    width = 46%
+    height = 42%
     item_font = "DejaVu Sans Regular 22"
     item_color = "#908caa"
     selected_item_color = "#e0def4"
     selected_item_pixmap_style = "select_*.png"
-    item_height = 48
-    item_padding = 14
-    item_spacing = 10
-    icon_width = 0
-    icon_height = 0
+    item_height = 64
+    item_padding = 16
+    item_spacing = 14
+    icon_width = 36
+    icon_height = 36
+    item_icon_space = 16
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 35%
+    top = 84%
+    width = 30%
+    height = 8
+    fg_color = "#c4a7e7"
+    bg_color = "#393552"
+    border_color = "#393552"
+    text = ""
 }
 
 + label {
     left = 0
-    top = 92%
+    top = 86%
     width = 100%
-    height = 36
+    height = 32
     align = "center"
-    color = "#6e6a86"
+    color = "#908caa"
     font = "DejaVu Sans Regular 16"
-    text = "@TIMEOUT_NOTIFICATION_SHORT@"
+    text = "@TIMEOUT_NOTIFICATION_MIDDLE@"
 }
