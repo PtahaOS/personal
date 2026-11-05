@@ -39,6 +39,14 @@ PROMPT='%F{#9ccfd8}%~%f ${vcs_info_msg_0_}%F{#c4a7e7}❯%f '
 
 # --- completion, затем fzf-tab, затем atuin --------------------------------
 # fzf-tab обязан стоять после compinit и до fast-syntax-highlighting.
+# Grok CLI. fpath до compinit, иначе дополнения grok не подхватятся.
+# Официальный установщик пишет PATH в ~/.zshrc, zsh его не читает: ZDOTDIR другой.
+if [[ -d "${HOME}/.grok/bin" ]]; then
+    export PATH="${HOME}/.grok/bin:${PATH}"
+fi
+if [[ -d "${HOME}/.grok/completions/zsh" ]]; then
+    fpath=("${HOME}/.grok/completions/zsh" ${fpath})
+fi
 mkdir -p "${HOME}/.cache/zsh"
 autoload -Uz compinit
 compinit -u -d "${HOME}/.cache/zsh/zcompdump"
