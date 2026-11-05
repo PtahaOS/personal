@@ -393,9 +393,9 @@ setup_grub_theme() {
         warn "Проверка: pacman -Q grub; ls -d /boot/grub /boot/loader 2>/dev/null; efibootmgr"
         return 0
     fi
-    if [[ ! -d /boot/grub ]]; then
+    if ! sudo test -d /boot/grub; then
         warn "Пакет grub есть, но каталога /boot/grub нет. Тему не копирую."
-        warn "Посмотри: ls /boot /efi /boot/efi 2>/dev/null; bootctl status"
+        warn "Посмотри: sudo ls /boot /efi /boot/efi; bootctl status"
         return 0
     fi
     local snippet="${PERSONAL_DIR}/system/grub/dark-matter.conf"
@@ -427,7 +427,7 @@ setup_grub_theme() {
     else
         warn "Нет grub-mkconfig"
     fi
-    if [[ -f /boot/grub/grub.cfg ]] && grep -q 'darkmatter/theme.txt' /boot/grub/grub.cfg; then
+    if sudo test -f /boot/grub/grub.cfg && sudo grep -q 'darkmatter/theme.txt' /boot/grub/grub.cfg; then
         log "В /boot/grub/grub.cfg тема darkmatter есть."
     else
         warn "В grub.cfg темы нет. Пришли: grep GRUB_THEME /etc/default/grub; ls /boot/grub/themes/darkmatter"
@@ -465,7 +465,7 @@ setup_luks_before_grub() {
 
     local efi="" candidate
     for candidate in /efi /boot/efi /boot; do
-        if [[ -d "${candidate}/EFI" ]]; then
+        if sudo test -d "${candidate}/EFI"; then
             efi="${candidate}"
             break
         fi
