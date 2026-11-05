@@ -199,6 +199,11 @@ install_paru() {
     if command -v paru >/dev/null; then
         return 0
     fi
+    # rustup из пакетов не выбирает тулчейн сам. Без этого makepkg paru
+    # падает: "rustup could not choose a version of rustc to run".
+    command -v rustup >/dev/null || die "Нет rustup. Он нужен, чтобы собрать paru."
+    log "Rust stable, иначе сборка paru не стартует"
+    rustup default stable
     log "Собираю paru (не от root)"
     local tmp
     tmp="$(mktemp -d)"
