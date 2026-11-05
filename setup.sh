@@ -21,6 +21,7 @@ set -euo pipefail
 AUTOLOGIN=1          # 1 = после пароля LUKS сразу Hyprland, без второго логина
 INSTALL_LIBREOFFICE=1
 INSTALL_STEAM=1
+INSTALL_BATTLENET=1  # Lutris + Wine/Proton: WoW и Warcraft III Reforged
 
 # ---------------------------------------------------------------------------
 # Куда класть репозитории
@@ -460,6 +461,49 @@ setup_services() {
     fi
 }
 
+setup_ge_proton() {
+    # Warcraft III Reforged на старом Proton пишет «Please check your VPN».
+    # Это не VPN: чинится GE-Proton 11-7 и новее. Ставим последний релиз.
+    [[ "${INSTALL_BATTLENET}" == "1" ]] || return 0
+    command -v curl >/dev/null || { warn "Нет curl, GE-Proton не скачаю"; return 0; }
+    command -v python3 >/dev/null || { warn "Нет python3, GE-Proton не скачаю"; return 0; }
+
+    local lutris_dir="${HOME}/.local/share/lutris/runners/wine"
+    local steam_dir="${HOME}/.local/share/Steam/compatibilitytools.d"
+    mkdir -p "${lutris_dir}" "${steam_dir}"
+
+    local tag
+    tag="$(curl -fsSL --retry 3 https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest \
+        | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')" || true
+    if [[ -z "${tag}" ]]; then
+        warn "Не узнал последнюю версию GE-Proton. Поставь её в ProtonUp-Qt, цель Lutris."
+        return 0
+    fi
+    if [[ ! -x "${lutris_dir}/${tag}/bin/wine" ]]; then
+        log "Качаю ${tag} для Lutris"
+        local tmp archive
+        tmp="$(mktemp -d)"
+        archive="${tmp}/${tag}.tar.gz"
+        if curl -fL --retry 3 -o "${archive}" \
+            "https://github.com/GloriousEggroll/proton-ge-custom/releases/download/${tag}/${tag}.tar.gz"; then
+            tar -C "${lutris_dir}" -xzf "${archive}"
+        else
+            warn "GE-Proton не скачался. Поставь ${tag} или новее через ProtonUp-Qt для Lutris."
+            rm -rf "${tmp}"
+            return 0
+        fi
+        rm -rf "${tmp}"
+    else
+        log "GE-Proton ${tag} уже стоит"
+    fi
+    [[ -x "${lutris_dir}/${tag}/bin/wine" ]] || { warn "В архиве нет bin/wine"; return 0; }
+    ln -sfn "${lutris_dir}/${tag}" "${steam_dir}/${tag}"
+    if [[ -d "${HOME}/.steam/root" && "${HOME}/.steam/root/compatibilitytools.d" != "${steam_dir}" ]]; then
+        mkdir -p "${HOME}/.steam/root/compatibilitytools.d"
+        ln -sfn "${lutris_dir}/${tag}" "${HOME}/.steam/root/compatibilitytools.d/${tag}"
+    fi
+}
+
 rebuild_initramfs_if_ucode() {
     if pacman -Q amd-ucode &>/dev/null || pacman -Q intel-ucode &>/dev/null; then
         if [[ -x /usr/bin/mkinitcpio ]]; then
@@ -485,6 +529,38 @@ cmd_packages() {
     if [[ "${INSTALL_STEAM}" == "1" ]]; then
         pkgs+=(steam gamemode lib32-gamemode gamescope mangohud lib32-mangohud)
     fi
+    if [[ "${INSTALL_BATTLENET}" == "1" ]]; then
+        # Лаунчер 32-битный. Без lib32 Battle.net падает ещё до логина.
+        # wine-staging не ставим: он конфликтует с wine, раннер всё равно GE-Proton.
+        pkgs+=(
+            lutris
+            umu-launcher
+            wine wine-mono wine-gecko winetricks
+            python-protobuf python-pefile
+            vkd3d lib32-vkd3d
+            vulkan-icd-loader lib32-vulkan-icd-loader vulkan-tools
+            gnutls lib32-gnutls
+            giflib lib32-giflib
+            libpng lib32-libpng
+            libldap lib32-libldap
+            mpg123 lib32-mpg123
+            openal lib32-openal
+            v4l-utils lib32-v4l-utils
+            libpulse lib32-libpulse
+            alsa-plugins lib32-alsa-plugins
+            alsa-lib lib32-alsa-lib
+            libjpeg-turbo lib32-libjpeg-turbo
+            sqlite lib32-sqlite
+            libxcomposite lib32-libxcomposite
+            libxinerama lib32-libxinerama
+            ncurses lib32-ncurses
+            libxslt lib32-libxslt
+            libva lib32-libva
+            gtk3 lib32-gtk3
+            gst-plugins-base-libs lib32-gst-plugins-base-libs
+            cabextract
+        )
+    fi
 
     log "Официальные пакеты"
     pacman_install "${pkgs[@]}"
@@ -496,6 +572,7 @@ cmd_packages() {
         aur_install "${aur[@]}"
     fi
     setup_rust
+    setup_ge_proton
     rebuild_initramfs_if_ucode
 }
 
@@ -549,6 +626,13 @@ main() {
      Строка загрузки LUKS в /etc/default/grub не переписывается.
   9. Тема Rosé Pine Moon: GTK (rose-pine-moon-gtk + иконки), Qt через Kvantum,
      MangoHud, fzf. nvim не трогал. Подсветка zsh уже была Moon.
+  10. Battle.net: открой Lutris и поставь скрипт battlenet-standard
+      (или в терминале: lutris lutris:install/battlenet-standard).
+      На первом установщике не логинься, пока он сам не закроется.
+      Потом из лаунчера ставь WoW и Warcraft III Reforged.
+      Раннер в Lutris: последний GE-Proton, не системный wine.
+      Для Reforged нужен GE-Proton 11-7 или новее, иначе «Please check your VPN».
+      NVIDIA та же, что у Steam: фильтры DXVK/VKD3D уже в сессии.
 
 Не ставил vulkan-intel: у тебя AMD CPU + NVIDIA, этот пакет был в старом init.sh по ошибке.
 wezterm берётся из Extra, а не wezterm-git: не надо компилировать Rust-терминал полчаса.
