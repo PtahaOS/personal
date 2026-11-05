@@ -595,6 +595,20 @@ EOF
     sudo systemctl daemon-reload
     sudo systemctl enable getty@tty1.service
 
+    # Заставка держится до первого кадра Hyprland, поэтому между паролем
+    # и рабочим столом не мелькает оболочка. plymouth quit не откладываем:
+    # если сессия не стартовала, через несколько секунд консоль всё равно видна.
+    # tty2 не трогаем. Ctrl+Alt+F2 — обычный вход, даже если Hyprland упал.
+    if command -v plymouth >/dev/null; then
+        sudo install -d /etc/systemd/system/plymouth-quit.service.d
+        sudo tee /etc/systemd/system/plymouth-quit.service.d/retain.conf >/dev/null << 'EOF'
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/plymouth quit --retain-splash
+EOF
+        sudo systemctl daemon-reload
+    fi
+
     if command -v zsh >/dev/null; then
         local zsh_bin
         zsh_bin="$(command -v zsh)"
@@ -609,7 +623,10 @@ EOF
     local body profile
     body="${marker}
 if [ -z \"\${WAYLAND_DISPLAY}\" ] && [ \"\$(tty)\" = \"/dev/tty1\" ]; then
-    exec start-hyprland
+    if command -v start-hyprland >/dev/null 2>&1; then
+        exec start-hyprland
+    fi
+    command -v plymouth >/dev/null 2>&1 && plymouth quit >/dev/null 2>&1
 fi"
     mkdir -p "${HOME}/.config/zsh"
     for profile in "${HOME}/.config/zsh/.zprofile" "${HOME}/.zprofile" "${HOME}/.bash_profile"; do
