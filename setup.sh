@@ -777,8 +777,7 @@ setup_plymouth() {
     local src="${PERSONAL_DIR}/system/plymouth/rose-pine-moon"
     [[ -f "${src}/rose-pine-moon.script" ]] || { warn "Нет ${src}"; return 0; }
     sudo install -d /usr/share/plymouth/themes/rose-pine-moon
-    sudo cp "${src}/rose-pine-moon.plymouth" "${src}/rose-pine-moon.script" \
-        /usr/share/plymouth/themes/rose-pine-moon/
+    sudo cp -r "${src}/." /usr/share/plymouth/themes/rose-pine-moon/
     sudo plymouth-set-default-theme rose-pine-moon \
         || warn "Не переключил тему Plymouth"
     printf '%s\n' '[Daemon]' 'Theme=rose-pine-moon' 'ShowDelay=0' 'DeviceTimeout=8' \
