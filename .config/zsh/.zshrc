@@ -1,3 +1,7 @@
+# База Oh My Zsh. Промпт Rosé Pine Moon и алиасы eza живут в
+# ~/.oh-my-zsh/custom/rose-pine-moon.zsh, его пишет setup.sh.
+# ZSH_THEME ниже перекрывается этим файлом. Starship не используется.
+
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 
