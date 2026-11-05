@@ -4,7 +4,7 @@
 
 -- Set programs that you use
 local terminal    = "wezterm"
-local fileManager = ""
+local fileManager = "thunar"
 local menu        = "rofi -show drun"
 
 
