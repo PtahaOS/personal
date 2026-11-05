@@ -1,5 +1,5 @@
-# Как Breeze: шапка, рамка выбранного пункта, полоса таймера.
-# Цвета Rose Pine Moon. Картинка 1920x1200.
+# Как Breeze, цвета Rose Pine Moon. Подсветка равна высоте строки,
+# иначе рамка наезжает на соседние пункты и меню прыгает.
 desktop-image: "background.png"
 desktop-color: "#232136"
 terminal-font: "DejaVu Sans Regular 16"
@@ -11,40 +11,16 @@ message-bg-color: "#232136"
 
 + boot_menu {
     left = 27%
-    top = 30%
+    top = 28%
     width = 46%
-    height = 42%
-    item_font = "DejaVu Sans Regular 22"
+    height = 55%
+    item_font = "DejaVu Sans Regular 20"
     item_color = "#908caa"
     selected_item_color = "#e0def4"
     selected_item_pixmap_style = "select_*.png"
-    item_height = 64
-    item_padding = 16
-    item_spacing = 14
-    icon_width = 36
-    icon_height = 36
-    item_icon_space = 16
-}
-
-+ progress_bar {
-    id = "__timeout__"
-    left = 35%
-    top = 84%
-    width = 30%
-    height = 8
-    fg_color = "#c4a7e7"
-    bg_color = "#393552"
-    border_color = "#393552"
-    text = ""
-}
-
-+ label {
-    left = 0
-    top = 86%
-    width = 100%
-    height = 32
-    align = "center"
-    color = "#908caa"
-    font = "DejaVu Sans Regular 16"
-    text = "@TIMEOUT_NOTIFICATION_MIDDLE@"
+    item_height = 36
+    item_padding = 2
+    item_spacing = 8
+    icon_width = 0
+    icon_height = 0
 }
