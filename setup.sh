@@ -38,6 +38,7 @@ PACMAN_BASE=(
     base-devel git curl wget rsync unzip zip
     pacman-contrib man-db man-pages
     fzf
+    zsh eza keyd
 )
 
 PACMAN_DEV=(
@@ -124,17 +125,23 @@ install_microcode() {
 install_nvidia() {
     # RTX 50 (Blackwell) работает только с open-модулями.
     # Не ставим второй вариант поверх того, что уже выбрал archinstall.
+    # nvidia-utils без карты не ставим: пакет тянет драйвер в userspace зря.
+    local has=0
     if pacman -Q nvidia-open-dkms &>/dev/null \
         || pacman -Q nvidia-open &>/dev/null \
         || pacman -Q nvidia-open-lts &>/dev/null; then
+        has=1
         log "Модуль NVIDIA уже установлен, добираю только userspace"
     elif lspci -d ::03xx 2>/dev/null | grep -qi nvidia; then
+        has=1
         log "Ставлю nvidia-open"
         sudo pacman -S --noconfirm --needed nvidia-open
     else
         warn "NVIDIA не видна в lspci, драйвер не ставлю"
     fi
-    sudo pacman -S --noconfirm --needed nvidia-utils lib32-nvidia-utils
+    if [[ "${has}" == "1" ]]; then
+        sudo pacman -S --noconfirm --needed nvidia-utils lib32-nvidia-utils
+    fi
 }
 
 pacman_install() {
@@ -225,6 +232,12 @@ deploy_dotfiles() {
 
     chmod +x "${HOME}/.config/hypr/scripts/"*.sh "${HOME}/.config/waybar/launch.sh" 2>/dev/null || true
 
+    local remap="${HOME}/.config/hypr/lua/remap.lua"
+    if [[ -f "${remap}" ]] && grep -q 'local fileManager = ""' "${remap}"; then
+        sed -i 's/local fileManager = ""/local fileManager = "thunar"/' "${remap}"
+        log "SUPER+E открывает thunar (в репе fileManager был пустой)"
+    fi
+
     mkdir -p "${HOME}/.local/share/applications"
     cat > "${HOME}/.local/share/applications/xgps.desktop" << 'EOF'
 [Desktop Entry]
@@ -240,9 +253,13 @@ EOF
 }
 
 setup_zsh() {
-    log "zsh + oh-my-zsh + autosuggestions"
+    log "zsh + oh-my-zsh"
+    if ! command -v zsh >/dev/null; then
+        die "Нет zsh. Сначала ./setup.sh packages"
+    fi
     local zsh_bin
     zsh_bin="$(command -v zsh)"
+    # chsh без имени пользователя меняет оболочку root. Всегда указываем ${USER}.
     if [[ "${SHELL}" != "${zsh_bin}" ]]; then
         sudo chsh -s "${zsh_bin}" "${USER}"
         log "Оболочка входа сменена на zsh. Заработает после выхода из сессии."
@@ -253,11 +270,14 @@ setup_zsh() {
             sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
     fi
 
-    local plugin="${HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
-    if [[ ! -d "${plugin}/.git" ]]; then
-        mkdir -p "${HOME}/.oh-my-zsh/custom/plugins"
-        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions "${plugin}"
-    fi
+    local name dest
+    mkdir -p "${HOME}/.oh-my-zsh/custom/plugins"
+    for name in zsh-autosuggestions zsh-syntax-highlighting; do
+        dest="${HOME}/.oh-my-zsh/custom/plugins/${name}"
+        if [[ ! -d "${dest}/.git" ]]; then
+            git clone --depth 1 "https://github.com/zsh-users/${name}" "${dest}"
+        fi
+    done
 
     if [[ -f "${PERSONAL_DIR}/.config/zsh/.zshrc" ]]; then
         cp -a "${PERSONAL_DIR}/.config/zsh/.zshrc" "${HOME}/.zshrc"
@@ -266,6 +286,106 @@ setup_zsh() {
         mkdir -p "${HOME}/.oh-my-zsh/custom"
         cp -a "${PERSONAL_DIR}/.config/zsh/aliases.zsh" "${HOME}/.oh-my-zsh/custom/aliases.zsh"
     fi
+    [[ -f "${HOME}/.zshrc" ]] || touch "${HOME}/.zshrc"
+}
+
+setup_shell() {
+    # Ставится после копирования .zshrc из репы: там alias ls='ls -a' и тема robbyrussell.
+    # Oh My Zsh ещё выставляет LS_COLORS, а он перекрывает theme.yml у eza.
+    log "eza и zsh, Rosé Pine Moon, без starship"
+    mkdir -p "${HOME}/.config/eza" "${HOME}/.oh-my-zsh/custom"
+    if ! curl -fsSL -o "${HOME}/.config/eza/theme.yml" \
+        https://raw.githubusercontent.com/rose-pine/eza/main/dist/rose-pine-moon.yml; then
+        warn "Не скачал тему eza, ls останется без Rosé Pine Moon"
+    fi
+
+    cat > "${HOME}/.oh-my-zsh/custom/rose-pine-moon.zsh" << 'EOF'
+# Rosé Pine Moon. Грузится после aliases.zsh, поэтому перекрывает alias ls.
+unset LS_COLORS
+unset EZA_COLORS
+
+HISTSIZE=100000
+SAVEHIST=100000
+HISTFILE="${HOME}/.zsh_history"
+setopt APPEND_HISTORY INC_APPEND_HISTORY SHARE_HISTORY EXTENDED_HISTORY
+setopt HIST_IGNORE_DUPS HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS
+
+alias ls='eza --icons=auto --group-directories-first'
+alias ll='eza -lh --icons=auto --git --group-directories-first --time-style=long-iso'
+alias la='eza -lah --icons=auto --git --group-directories-first'
+alias lt='eza -T --icons=auto --git-ignore --group-directories-first'
+alias lta='eza -Ta --icons=auto --group-directories-first'
+
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#6e6a86'
+typeset -A ZSH_HIGHLIGHT_STYLES
+ZSH_HIGHLIGHT_STYLES[default]='fg=#e0def4'
+ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#eb6f92,bold'
+ZSH_HIGHLIGHT_STYLES[reserved-word]='fg=#c4a7e7'
+ZSH_HIGHLIGHT_STYLES[alias]='fg=#9ccfd8'
+ZSH_HIGHLIGHT_STYLES[suffix-alias]='fg=#9ccfd8'
+ZSH_HIGHLIGHT_STYLES[builtin]='fg=#3e8fb0'
+ZSH_HIGHLIGHT_STYLES[function]='fg=#3e8fb0'
+ZSH_HIGHLIGHT_STYLES[command]='fg=#9ccfd8'
+ZSH_HIGHLIGHT_STYLES[precommand]='fg=#c4a7e7'
+ZSH_HIGHLIGHT_STYLES[commandseparator]='fg=#908caa'
+ZSH_HIGHLIGHT_STYLES[path]='fg=#f6c177'
+ZSH_HIGHLIGHT_STYLES[globbing]='fg=#ea9a97'
+ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#f6c177'
+ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#f6c177'
+ZSH_HIGHLIGHT_STYLES[comment]='fg=#6e6a86'
+
+PROMPT='%F{#9ccfd8}%~%f $(git_prompt_info)%F{#c4a7e7}❯%f '
+ZSH_THEME_GIT_PROMPT_PREFIX="%F{#6e6a86}(%F{#c4a7e7}"
+ZSH_THEME_GIT_PROMPT_SUFFIX="%F{#6e6a86}) "
+ZSH_THEME_GIT_PROMPT_DIRTY="%F{#eb6f92}*"
+ZSH_THEME_GIT_PROMPT_CLEAN=""
+EOF
+
+    local marker="# ptaha-shell"
+    if ! grep -q "${marker}" "${HOME}/.zshrc"; then
+        cat >> "${HOME}/.zshrc" << EOF
+
+${marker}
+# подсветка синтаксиса должна быть последней, иначе ломаются виджеты zsh
+if [[ -r "\${HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+  source "\${HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+EOF
+    fi
+
+    apply_rose_pine_gtk
+}
+
+apply_rose_pine_gtk() {
+    local theme="" cursor="" dir
+    for dir in /usr/share/themes "${HOME}/.themes" "${HOME}/.local/share/themes"; do
+        if [[ -d "${dir}/rose-pine-moon" ]]; then
+            theme="rose-pine-moon"
+            break
+        fi
+    done
+    for dir in /usr/share/icons "${HOME}/.icons" "${HOME}/.local/share/icons"; do
+        if [[ -d "${dir}/rose-pine-cursor" ]]; then
+            cursor="rose-pine-cursor"
+            break
+        elif [[ -d "${dir}/BreezeX-RosePine-Linux" ]]; then
+            cursor="BreezeX-RosePine-Linux"
+            break
+        fi
+    done
+    if [[ -z "${theme}" ]]; then
+        warn "Каталог темы rose-pine-moon не найден, GTK не переключаю"
+        return 0
+    fi
+    log "GTK: ${theme}"
+    mkdir -p "${HOME}/.config/gtk-3.0" "${HOME}/.config/gtk-4.0"
+    cat > "${HOME}/.config/gtk-3.0/settings.ini" << EOF
+[Settings]
+gtk-theme-name=${theme}
+gtk-application-prefer-dark-theme=1
+${cursor:+gtk-cursor-theme-name=${cursor}}
+EOF
+    cp -a "${HOME}/.config/gtk-3.0/settings.ini" "${HOME}/.config/gtk-4.0/settings.ini"
 }
 
 setup_keyd() {
@@ -380,6 +500,7 @@ cmd_dotfiles() {
     clone_or_pull "${NVIM_URL}" "${NVIM_DIR}"
     setup_zsh
     deploy_dotfiles
+    setup_shell
     setup_keyd
     setup_tmux_plugins
     setup_autologin
@@ -410,14 +531,18 @@ main() {
   3. Открой nvim один раз и дождись, пока lazy.nvim скачает плагины,
      потом :Mason чтобы докачались lua_ls, rust_analyzer, clangd.
   4. В tmux нажми Ctrl-b затем I, если тема rose-pine не встала сама.
-  5. Файл-менеджер на SUPER+E пустой: в ~/personal/.config/hypr/lua/remap.lua
-     поставь local fileManager = "thunar" и запусти ./setup.sh dotfiles
+  5. SUPER+E открывает thunar. Скрипт сам подставляет это в remap.lua,
+     в репе строка fileManager была пустая.
   6. Новые программы: допиши в PACMAN_EXTRA или AUR_EXTRA в этом файле
      и запусти ./setup.sh packages
+  7. Новый шелл: eza (ls/ll/la/lt) и промпт Rosé Pine Moon, без starship.
+     Открой новый терминал. Starship не ставится.
 
 Не ставил vulkan-intel: у тебя AMD CPU + NVIDIA, этот пакет был в старом init.sh по ошибке.
 wezterm берётся из Extra, а не wezterm-git: не надо компилировать Rust-терминал полчаса.
 oh-my-zsh больше не меняет оболочку root (старый zsh.sh делал chsh без имени пользователя).
+nvidia-utils ставится только если карта или модуль уже есть.
+keyd входит в пакеты, раньше скрипт включал сервис и не ставил пакет.
 EOF
 }
 
