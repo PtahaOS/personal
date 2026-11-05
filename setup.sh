@@ -22,6 +22,7 @@ AUTOLOGIN=1          # 1 = после пароля LUKS сразу Hyprland, б�
 INSTALL_LIBREOFFICE=1
 INSTALL_STEAM=1
 INSTALL_BATTLENET=1  # Lutris + Wine/Proton: WoW и Warcraft III Reforged
+INSTALL_GROK=1       # Grok CLI в терминале: ~/.grok/bin + /usr/local/bin
 
 # ---------------------------------------------------------------------------
 # Куда класть репозитории
@@ -461,6 +462,23 @@ setup_services() {
     fi
 }
 
+setup_grok() {
+    [[ "${INSTALL_GROK}" == "1" ]] || return 0
+    command -v curl >/dev/null || { warn "Нет curl, Grok CLI не поставлю"; return 0; }
+    log "Grok CLI"
+    # Бинарник в ~/.grok/bin. Установщик дописывает ~/.zshrc, но zsh читает
+    # ~/.config/zsh/.zshrc (ZDOTDIR). PATH для grok лежит в том файле в репозитории.
+    curl -fsSL https://x.ai/cli/install.sh | bash || { warn "Установщик Grok не прошёл"; return 0; }
+    if [[ ! -x "${HOME}/.grok/bin/grok" ]]; then
+        warn "Бинарник ~/.grok/bin/grok не появился"
+        return 0
+    fi
+    sudo ln -sfn "${HOME}/.grok/bin/grok" /usr/local/bin/grok
+    if [[ -e "${HOME}/.grok/bin/agent" ]]; then
+        sudo ln -sfn "${HOME}/.grok/bin/agent" /usr/local/bin/agent
+    fi
+}
+
 setup_ge_proton() {
     # Warcraft III Reforged на старом Proton пишет «Please check your VPN».
     # Это не VPN: чинится GE-Proton 11-7 и новее. Ставим последний релиз.
@@ -573,6 +591,7 @@ cmd_packages() {
         aur_install "${aur[@]}"
     fi
     setup_rust
+    setup_grok
     setup_ge_proton
     rebuild_initramfs_if_ucode
 }
@@ -618,16 +637,18 @@ main() {
   4. В tmux нажми Ctrl-b затем I, если тема rose-pine не встала сама.
   5. Оболочка: zinit, atuin, fzf-tab, fast-syntax-highlighting.
      Новый терминал подхватит их. Ctrl-R — история atuin.
-  6. Новые программы: допиши в PACMAN_EXTRA или AUR_EXTRA в этом файле
+  6. Grok в терминале: зайди в папку проекта и набери grok.
+     Первый запуск откроет браузер для входа. Обновление: grok update.
+  7. Новые программы: допиши в PACMAN_EXTRA или AUR_EXTRA в этом файле
      и запусти ./setup.sh packages
-  7. NVIDIA основная, встроенная на месте. ls -l /dev/dri/nvidia-dgpu /dev/dri/amd-igpu
+  8. NVIDIA основная, встроенная на месте. ls -l /dev/dri/nvidia-dgpu /dev/dri/amd-igpu
      Steam не берёт 780M: DXVK_FILTER_DEVICE_NAME и VKD3D_FILTER_DEVICE_NAME.
      cat /sys/module/nvidia_drm/parameters/modeset должно быть Y.
-  8. GRUB: тема Dark Matter, стиль Arch, картинка 1080p, режим 1920x1200.
+  9. GRUB: тема Dark Matter, стиль Arch, картинка 1080p, режим 1920x1200.
      Строка загрузки LUKS в /etc/default/grub не переписывается.
-  9. Тема Rosé Pine Moon: GTK (rose-pine-moon-gtk + иконки), Qt через Kvantum,
+  10. Тема Rosé Pine Moon: GTK (rose-pine-moon-gtk + иконки), Qt через Kvantum,
      MangoHud, fzf. nvim не трогал. Подсветка zsh уже была Moon.
-  10. Battle.net: открой Lutris и поставь скрипт battlenet-standard
+  11. Battle.net: открой Lutris и поставь скрипт battlenet-standard
       (или в терминале: lutris lutris:install/battlenet-standard).
       На первом установщике не логинься, пока он сам не закроется.
       Потом из лаунчера ставь WoW и Warcraft III Reforged.
