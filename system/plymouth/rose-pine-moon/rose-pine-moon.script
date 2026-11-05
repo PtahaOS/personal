@@ -1,0 +1,44 @@
+// Rose Pine Moon. Цвета 0..1: base #232136, text #e0def4, iris #c4a7e7, muted #6e6a86.
+Window.SetBackgroundTopColor(0.137, 0.129, 0.212);
+Window.SetBackgroundBottomColor(0.137, 0.129, 0.212);
+
+screen.w = Window.GetWidth();
+screen.h = Window.GetHeight();
+screen.half.w = screen.w / 2;
+screen.half.h = screen.h / 2;
+
+title.image = Image.Text("rose pine", 0.769, 0.655, 0.906);
+title.sprite = Sprite(title.image);
+title.sprite.SetX(screen.half.w - title.image.GetWidth() / 2);
+title.sprite.SetY(screen.half.h - 48);
+
+hint.image = Image.Text("disk", 0.431, 0.416, 0.525);
+hint.sprite = Sprite(hint.image);
+hint.sprite.SetX(screen.half.w - hint.image.GetWidth() / 2);
+hint.sprite.SetY(screen.half.h - 16);
+
+prompt_ready = 0;
+bullets.sprite = Sprite();
+
+fun DisplayPasswordCallback(prompt, bulletCount) {
+    if (prompt_ready == 0) {
+        prompt.image = Image.Text("password", 0.878, 0.871, 0.957);
+        prompt.sprite = Sprite(prompt.image);
+        prompt.sprite.SetX(screen.half.w - prompt.image.GetWidth() / 2);
+        prompt.sprite.SetY(screen.half.h + 16);
+        prompt_ready = 1;
+    }
+
+    marks = "";
+    for (i = 0; i < bulletCount; i++)
+        marks = marks + "*";
+    if (bulletCount == 0)
+        marks = " ";
+
+    marks.image = Image.Text(marks, 0.769, 0.655, 0.906);
+    bullets.sprite.SetImage(marks.image);
+    bullets.sprite.SetX(screen.half.w - marks.image.GetWidth() / 2);
+    bullets.sprite.SetY(screen.half.h + 48);
+}
+
+Plymouth.SetDisplayPasswordFunction(DisplayPasswordCallback);
