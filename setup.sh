@@ -578,7 +578,7 @@ setup_color_scheme() {
 
 setup_autologin() {
     [[ "${AUTOLOGIN}" == "1" ]] || return 0
-    log "Hyprland на tty1 без оболочки между паролем и рабочим столом"
+    log "Автологин на tty1 и запуск Hyprland"
     local dm
     for dm in sddm gdm lightdm greetd ly lxdm; do
         if systemctl is-enabled "${dm}.service" &>/dev/null; then
@@ -587,59 +587,21 @@ setup_autologin() {
         fi
     done
 
-    # Старый путь: agetty --autologin запускал zsh, и консоль успевала
-    # нарисоваться. retain-splash это не перекрывает: текстовый tty
-    # сбрасывает картинку. Теперь Hyprland берёт tty1 сам, без оболочки.
-    sudo rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf \
+    # Прямой запуск Hyprland мимо getty блокировал вход, если сессия не поднялась.
+    sudo systemctl disable hyprland-tty.service 2>/dev/null || true
+    sudo rm -f /etc/systemd/system/hyprland-tty.service \
+        /etc/systemd/system/hyprland-tty-fallback.service \
+        /etc/systemd/system/multi-user.target.wants/hyprland-tty.service \
         /etc/systemd/system/plymouth-quit.service.d/retain.conf
-    sudo systemctl disable getty@tty1.service || true
-    sudo systemctl enable getty@tty2.service || true
 
-    if ! command -v start-hyprland >/dev/null; then
-        warn "Нет start-hyprland. Автовход не включил, tty1 останется обычным."
-        sudo systemctl enable getty@tty1.service || true
-        return 0
-    fi
-
-    sudo tee /etc/systemd/system/hyprland-tty-fallback.service >/dev/null << 'EOF'
-[Unit]
-Description=Show tty1 login if Hyprland failed
-
+    sudo install -d /etc/systemd/system/getty@tty1.service.d
+    sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null << EOF
 [Service]
-Type=oneshot
-ExecStart=-/usr/bin/plymouth quit
-ExecStart=/usr/bin/systemctl start getty@tty1.service
-EOF
-    sudo tee /etc/systemd/system/hyprland-tty.service >/dev/null << EOF
-[Unit]
-Description=Hyprland on tty1
-After=systemd-user-sessions.service plymouth-quit.service
-Conflicts=getty@tty1.service
-OnFailure=hyprland-tty-fallback.service
-
-[Service]
-User=${USER}
-PAMName=login
-TTYPath=/dev/tty1
-TTYReset=yes
-TTYVHangup=yes
-TTYVTDisallocate=yes
-StandardInput=tty
-StandardOutput=journal
-StandardError=journal
-WorkingDirectory=${HOME}
-Environment=XDG_SESSION_TYPE=wayland
-Environment=XDG_CURRENT_DESKTOP=Hyprland
-Environment=XDG_SESSION_DESKTOP=Hyprland
-ExecStartPre=-/usr/bin/plymouth quit
-ExecStart=/usr/bin/start-hyprland
-Restart=no
-
-[Install]
-WantedBy=multi-user.target
+ExecStart=
+ExecStart=-/usr/bin/agetty --autologin ${USER} --noclear %I \$TERM
 EOF
     sudo systemctl daemon-reload
-    sudo systemctl enable hyprland-tty.service
+    sudo systemctl enable getty@tty1.service
 
     if command -v zsh >/dev/null; then
         local zsh_bin
@@ -649,20 +611,26 @@ EOF
         fi
     fi
 
-    # Убираем старый exec start-hyprland из профиля. Иначе запасной вход
-    # на tty1 сразу снова уйдёт в Hyprland и оболочки не будет.
+    # Пишем в оба файла. zsh читает ровно один:
+    # ~/.config/zsh/.zprofile, если ZDOTDIR задан в ~/.zshenv, иначе ~/.zprofile.
     local marker="# ptaha-autologin"
-    local profile
+    local body profile
+    body="${marker}
+if [ -z \"\${WAYLAND_DISPLAY}\" ] && [ \"\$(tty)\" = \"/dev/tty1\" ]; then
+    exec start-hyprland
+fi"
+    mkdir -p "${HOME}/.config/zsh"
     for profile in "${HOME}/.config/zsh/.zprofile" "${HOME}/.zprofile" "${HOME}/.bash_profile"; do
-        [[ -f "${profile}" ]] || continue
-        grep -q "${marker}" "${profile}" || continue
-        awk -v marker="${marker}" '
-            $0 == marker { skip = 1; next }
-            skip && $0 == "fi" { skip = 0; next }
-            skip { next }
-            { print }
-        ' "${profile}" > "${profile}.tmp"
-        mv "${profile}.tmp" "${profile}"
+        if [[ -f "${profile}" ]] && grep -q "${marker}" "${profile}"; then
+            awk -v marker="${marker}" '
+                $0 == marker { skip = 1; next }
+                skip && $0 == "fi" { skip = 0; next }
+                skip { next }
+                { print }
+            ' "${profile}" > "${profile}.tmp"
+            mv "${profile}.tmp" "${profile}"
+        fi
+        printf '\n%s\n' "${body}" >> "${profile}"
     done
 }
 
@@ -841,7 +809,7 @@ setup_plymouth() {
     elif [[ -r /proc/cmdline ]]; then
         cmdline="$(cat /proc/cmdline)"
     fi
-    for flag in quiet splash nvidia-drm.modeset=1 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=0; do
+    for flag in quiet splash nvidia-drm.modeset=1; do
         if [[ " ${cmdline} " != *" ${flag} "* ]]; then
             cmdline="${cmdline} ${flag}"
         fi
@@ -874,7 +842,7 @@ setup_plymouth() {
 
     local grub=/etc/default/grub key=GRUB_CMDLINE_LINUX_DEFAULT line value flag
     if [[ -f "${grub}" ]]; then
-        for flag in quiet splash nvidia-drm.modeset=1 systemd.show_status=false rd.systemd.show_status=false vt.global_cursor_default=0; do
+        for flag in quiet splash nvidia-drm.modeset=1; do
             line="$(grep -E "^${key}=" "${grub}" || true)"
             if [[ -z "${line}" ]]; then
                 echo "${key}=\"${flag}\"" | sudo tee -a "${grub}" >/dev/null
