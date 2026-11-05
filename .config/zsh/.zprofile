@@ -1,5 +1,5 @@
 # ptaha-autologin
 # zsh с ZDOTDIR читает именно этот файл, не ~/.zprofile.
 if [ -z "${WAYLAND_DISPLAY}" ] && [ "$(tty)" = "/dev/tty1" ]; then
-    exec Hyprland
+    exec start-hyprland
 fi
