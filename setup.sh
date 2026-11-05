@@ -57,6 +57,7 @@ PACMAN_DESKTOP=(
     hyprland
     xdg-desktop-portal-hyprland
     xdg-desktop-portal-gtk
+    gsettings-desktop-schemas
     qt5-wayland qt6-wayland qt5ct qt6ct
     kvantum
     waybar rofi swaync
@@ -274,6 +275,7 @@ deploy_dotfiles() {
     sync_dir "${PERSONAL_DIR}/.config/Kvantum" "${HOME}/.config/Kvantum"
     sync_dir "${PERSONAL_DIR}/.config/qt6ct"   "${HOME}/.config/qt6ct"
     sync_dir "${PERSONAL_DIR}/.config/MangoHud" "${HOME}/.config/MangoHud"
+    sync_dir "${PERSONAL_DIR}/.config/xdg-desktop-portal" "${HOME}/.config/xdg-desktop-portal"
     mkdir -p "${HOME}/.config/tmux"
     rsync -a "${PERSONAL_DIR}/.config/tmux/tmux.conf" "${HOME}/.config/tmux/tmux.conf"
     if [[ -d "${PERSONAL_DIR}/.config/tmux/cheat-sheet" ]]; then
@@ -369,14 +371,21 @@ apply_grub_keys() {
 setup_grub_theme() {
     # Инсталлятор темы всегда спрашивает стиль в stdin, поэтому копируем сами:
     # Arch, 1080p, цветные иконки. /etc/default/grub целиком не заменяется.
-    [[ -d /boot/grub ]] || { warn "Нет /boot/grub (возможно systemd-boot), тему GRUB не ставлю"; return 0; }
+    [[ -d /boot/grub ]] || {
+        warn "Нет /boot/grub. Тема Dark Matter ставится только на GRUB."
+        if [[ -f /boot/loader/loader.conf ]]; then
+            warn "Сейчас загрузчик systemd-boot, не GRUB. Тему на него этот скрипт не вешает."
+        fi
+        return 0
+    }
     local snippet="${PERSONAL_DIR}/system/grub/dark-matter.conf"
     [[ -f "${snippet}" ]] || { warn "Нет ${snippet}"; return 0; }
 
     local cache="${XDG_CACHE_HOME:-${HOME}/.cache}/darkmatter-grub2-theme"
     if [[ ! -d "${cache}/.git" ]]; then
         mkdir -p "$(dirname "${cache}")"
-        git clone --depth 1 https://github.com/VandalByte/darkmatter-grub2-theme.git "${cache}"
+        git clone --depth 1 https://github.com/VandalByte/darkmatter-grub2-theme.git "${cache}" \
+            || { warn "Не скачал тему GRUB"; return 0; }
     else
         git -C "${cache}" pull --ff-only || warn "Не обновил клон темы GRUB, беру то что уже скачано"
     fi
@@ -426,6 +435,23 @@ setup_rust() {
     rustup component add clippy rustfmt
 }
 
+setup_color_scheme() {
+    # GTK-тема в settings.ini браузеру мало. Helium и остальные Chromium
+    # спрашивают у портала color-scheme. Без prefer-dark он отвечает «светлая».
+    log "Тёмная схема: приложения и браузер"
+    if command -v gsettings >/dev/null; then
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' \
+            || warn "gsettings color-scheme не записался"
+        gsettings set org.gnome.desktop.interface gtk-theme 'rose-pine-moon-gtk' || true
+        gsettings set org.gnome.desktop.interface icon-theme 'rose-pine-moon-icons' || true
+        gsettings set org.gnome.desktop.interface cursor-theme 'BreezeX-RosePine-Linux' || true
+        gsettings set org.gnome.desktop.interface cursor-size 24 || true
+    else
+        warn "Нет gsettings. Поставь glib2 и gsettings-desktop-schemas, потом ./setup.sh dotfiles"
+    fi
+    systemctl --user restart xdg-desktop-portal.service xdg-desktop-portal-gtk.service 2>/dev/null || true
+}
+
 setup_autologin() {
     [[ "${AUTOLOGIN}" == "1" ]] || return 0
     log "Автологин на tty1 и запуск Hyprland"
@@ -435,15 +461,18 @@ setup_autologin() {
 ExecStart=
 ExecStart=-/usr/bin/agetty --autologin ${USER} --noclear %I \$TERM
 EOF
+    sudo systemctl daemon-reload
 
+    # ZDOTDIR=~/.config/zsh, поэтому ~/.zprofile zsh не читает.
     local marker="# ptaha-autologin"
-    local profile="${HOME}/.zprofile"
+    local profile="${HOME}/.config/zsh/.zprofile"
+    mkdir -p "${HOME}/.config/zsh"
     if [[ -f "${profile}" ]] && grep -q "${marker}" "${profile}"; then
         :
     else
-        cat >> "${profile}" << EOF
-
+        cat > "${profile}" << EOF
 ${marker}
+# zsh с ZDOTDIR читает именно этот файл, не ~/.zprofile.
 if [ -z "\${WAYLAND_DISPLAY}" ] && [ "\$(tty)" = "/dev/tty1" ]; then
     exec Hyprland
 fi
@@ -607,6 +636,7 @@ cmd_dotfiles() {
     clone_or_pull "${NVIM_URL}" "${NVIM_DIR}"
     deploy_dotfiles
     setup_gtk4_theme
+    setup_color_scheme
     setup_zsh
     setup_keyd
     setup_tmux_plugins
@@ -636,6 +666,10 @@ main() {
 
 Дальше:
   1. Перезагрузись. Пароль LUKS, затем сразу Hyprland (если AUTOLOGIN=1).
+     Пароль пользователя на tty1 не спрашивается. Запуск Hyprland лежит
+     в ~/.config/zsh/.zprofile, не в ~/.zprofile.
+     Тёмная схема для браузера включается здесь же. Helium после этого
+     закрой полностью и открой снова.
   2. sudo по-прежнему спрашивает пароль.
   3. Открой nvim один раз и дождись, пока lazy.nvim скачает плагины,
      потом :Mason чтобы докачались lua_ls, rust_analyzer, clangd.
