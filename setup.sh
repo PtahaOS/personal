@@ -39,6 +39,7 @@ PACMAN_BASE=(
     pacman-contrib man-db man-pages
     fzf
     zsh eza keyd
+    pciutils
 )
 
 PACMAN_DEV=(
@@ -140,8 +141,42 @@ install_nvidia() {
         warn "NVIDIA не видна в lspci, драйвер не ставлю"
     fi
     if [[ "${has}" == "1" ]]; then
-        sudo pacman -S --noconfirm --needed nvidia-utils lib32-nvidia-utils
+        sudo pacman -S --noconfirm --needed nvidia-utils lib32-nvidia-utils libva-nvidia-driver
+        setup_nvidia_primary
     fi
+}
+
+setup_nvidia_primary() {
+    # Рендер только на NVIDIA. card0/card1 меняются между загрузками, поэтому симлинк.
+    log "NVIDIA primary: modeset, initramfs, симлинк /dev/dri/nvidia-dgpu"
+    sudo tee /etc/modprobe.d/nvidia.conf >/dev/null << 'EOF'
+options nvidia_drm modeset=1
+options nvidia NVreg_PreserveVideoMemoryAllocations=1
+EOF
+
+    local id
+    id="$(lspci -nn -d 10de: | awk '/VGA|3D|Display/ { print $1; exit }')"
+    if [[ -z "${id}" ]]; then
+        warn "Не нашёл PCI-адрес NVIDIA, симлинк не создал"
+        return 0
+    fi
+    sudo tee /etc/udev/rules.d/99-nvidia-dgpu.rules >/dev/null << EOF
+KERNEL=="card*", KERNELS=="0000:${id}", SUBSYSTEM=="drm", SUBSYSTEMS=="pci", SYMLINK+="dri/nvidia-dgpu"
+EOF
+    sudo udevadm control --reload
+    sudo udevadm trigger --subsystem-match=drm || true
+
+    if [[ ! -f /etc/mkinitcpio.conf ]]; then
+        return 0
+    fi
+    local mod
+    for mod in nvidia nvidia_modeset nvidia_uvm nvidia_drm; do
+        if grep -Eq "^MODULES=\\(.*\\b${mod}\\b" /etc/mkinitcpio.conf; then
+            continue
+        fi
+        sudo sed -i "0,/^MODULES=(/{s/^MODULES=(\\(.*\\))/MODULES=(\\1 ${mod})/}" /etc/mkinitcpio.conf
+    done
+    sudo sed -i 's/MODULES=( /MODULES=(/' /etc/mkinitcpio.conf
 }
 
 pacman_install() {
