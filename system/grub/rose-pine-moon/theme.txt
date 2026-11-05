@@ -20,7 +20,7 @@ message-bg-color: "#232136"
     selected_item_pixmap_style = "select_*.png"
     item_height = 36
     item_padding = 2
-    item_spacing = 8
+    item_spacing = 14
     icon_width = 0
     icon_height = 0
 }
