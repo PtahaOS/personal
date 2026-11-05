@@ -414,11 +414,13 @@ setup_grub_theme() {
     local theme=/boot/grub/themes/darkmatter
     log "GRUB Dark Matter → ${theme}"
     sudo install -d -m 755 "${theme}"
-    sudo cp -a "${cache}/assets/backgrounds/arch-1080p.png" "${theme}/background.png"
+    # /boot — FAT32. cp -a пытается сохранить владельца и падает:
+    # Operation not permitted. Копируем без ownership.
+    sudo cp "${cache}/assets/backgrounds/arch-1080p.png" "${theme}/background.png"
     sudo rm -rf "${theme}/icons"
-    sudo cp -a "${cache}/assets/icons-1080p/color" "${theme}/icons"
-    sudo cp -a "${cache}/assets/fonts/1080p/." "${theme}/"
-    sudo cp -a "${cache}/base/1080p/." "${theme}/"
+    sudo cp -r "${cache}/assets/icons-1080p/color" "${theme}/icons"
+    sudo cp -r "${cache}/assets/fonts/1080p/." "${theme}/"
+    sudo cp -r "${cache}/base/1080p/." "${theme}/"
     sudo chmod -R a+rX "${theme}" || true
 
     apply_grub_keys "${snippet}"
