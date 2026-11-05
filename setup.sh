@@ -943,9 +943,14 @@ cmd_dotfiles() {
     setup_tmux_plugins
     setup_autologin
     restore_igpu
+    setup_services
+}
+
+cmd_boot() {
+    need_user
+    clone_or_pull "${PERSONAL_URL}" "${PERSONAL_DIR}"
     setup_grub_theme
     setup_plymouth
-    setup_services
 }
 
 main() {
@@ -954,12 +959,14 @@ main() {
         packages) cmd_packages ;;
         dotfiles) cmd_dotfiles ;;
         wallpaper) setup_wallpaper ;;
+        boot) cmd_boot ;;
         all|"")
             cmd_packages
             cmd_dotfiles
+            cmd_boot
             ;;
         *)
-            die "Неизвестный режим: ${mode}. Используй: packages | dotfiles | wallpaper | all"
+            die "Неизвестный режим: ${mode}. Используй: packages | dotfiles | wallpaper | boot | all"
             ;;
     esac
 
