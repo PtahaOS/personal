@@ -43,6 +43,7 @@ PACMAN_BASE=(
     fzf
     zsh eza atuin keyd
     pciutils
+    plymouth
 )
 
 PACMAN_DEV=(
@@ -765,6 +766,60 @@ cmd_packages() {
     rebuild_initramfs_if_ucode
 }
 
+setup_plymouth() {
+    # Пароль LUKS спрашивается уже в initramfs, после меню GRUB.
+    # Plymouth рисует его. cryptdevice и хук encrypt не трогаем, только
+    # вставляем plymouth перед encrypt и слово splash в командную строку.
+    log "Экран пароля LUKS: Plymouth, Rose Pine Moon"
+    sudo pacman -S --noconfirm --needed plymouth \
+        || { warn "plymouth не поставился"; return 0; }
+
+    local src="${PERSONAL_DIR}/system/plymouth/rose-pine-moon"
+    [[ -f "${src}/rose-pine-moon.script" ]] || { warn "Нет ${src}"; return 0; }
+    sudo install -d /usr/share/plymouth/themes/rose-pine-moon
+    sudo cp "${src}/rose-pine-moon.plymouth" "${src}/rose-pine-moon.script" \
+        /usr/share/plymouth/themes/rose-pine-moon/
+    sudo plymouth-set-default-theme rose-pine-moon \
+        || warn "Не переключил тему Plymouth"
+
+    if [[ -f /etc/mkinitcpio.conf ]] && ! grep -Eq '^HOOKS=.*[[:space:]]plymouth[[:space:]]' /etc/mkinitcpio.conf; then
+        if grep -Eq '^HOOKS=.*[[:space:]](sd-encrypt|encrypt)([[:space:]]|\))' /etc/mkinitcpio.conf; then
+            sudo sed -i -E 's/^(HOOKS=\(.*)[[:space:]](sd-encrypt|encrypt)/\1 plymouth \2/' /etc/mkinitcpio.conf
+        else
+            warn "В HOOKS нет encrypt. Plymouth не вставил, чтобы не остаться без диска."
+        fi
+    fi
+
+    local grub=/etc/default/grub key=GRUB_CMDLINE_LINUX_DEFAULT line value flag
+    if [[ -f "${grub}" ]]; then
+        for flag in quiet splash; do
+            line="$(grep -E "^${key}=" "${grub}" || true)"
+            if [[ -z "${line}" ]]; then
+                echo "${key}=\"${flag}\"" | sudo tee -a "${grub}" >/dev/null
+                continue
+            fi
+            value="${line#*=}"
+            value="${value#\"}"
+            value="${value%\"}"
+            if [[ " ${value} " == *" ${flag} "* ]]; then
+                continue
+            fi
+            value="${value} ${flag}"
+            value="${value#"${value%%[![:space:]]*}"}"
+            sudo sed -i -E "s|^${key}=.*|${key}=\"${value}\"|" "${grub}"
+        done
+        if [[ -x /usr/bin/grub-mkconfig && -d /boot/grub ]]; then
+            sudo grub-mkconfig -o /boot/grub/grub.cfg \
+                || warn "grub-mkconfig для splash не прошёл"
+        fi
+    fi
+
+    if [[ -x /usr/bin/mkinitcpio ]]; then
+        log "Пересобираю initramfs для экрана пароля. Это несколько минут."
+        sudo mkinitcpio -P || warn "mkinitcpio -P не прошёл. Пароль останется текстом."
+    fi
+}
+
 setup_wallpaper() {
     local img="${HOME}/.config/hypr/wallpapers/wallpaper2.jpg"
     [[ -f "${img}" ]] || { warn "Нет ${img}"; return 0; }
@@ -796,6 +851,7 @@ cmd_dotfiles() {
     setup_autologin
     restore_igpu
     setup_grub_theme
+    setup_plymouth
     setup_services
 }
 
@@ -819,7 +875,8 @@ main() {
 Готово.
 
 Дальше:
-  1. Перезагрузись. Пароль LUKS, затем сразу Hyprland (если AUTOLOGIN=1).
+  1. Перезагрузись. Сначала меню GRUB, потом тёмный экран пароля LUKS,
+     затем сразу Hyprland (если AUTOLOGIN=1).
      Пароль пользователя на tty1 не спрашивается. Запуск Hyprland лежит
      в ~/.config/zsh/.zprofile, не в ~/.zprofile.
      Тёмная схема для браузера включается здесь же. Helium после этого
