@@ -24,6 +24,11 @@ setopt HIST_IGNORE_DUPS HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANK
 
 [[ -r "${HOME}/.config/zsh/aliases.zsh" ]] && source "${HOME}/.config/zsh/aliases.zsh"
 
+# SSH-агент. Пароль ключа GitHub спрашивается один раз за вход в систему.
+if (( $+commands[keychain] )) && [[ -f "${HOME}/.ssh/id_ed25519" ]]; then
+    eval "$(keychain --eval --quiet --agents ssh id_ed25519)"
+fi
+
 # --- промпт Rosé Pine Moon, без git_prompt_info из Oh My Zsh ---------------
 autoload -Uz vcs_info
 setopt PROMPT_SUBST
