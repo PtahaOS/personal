@@ -80,7 +80,6 @@ PACMAN_DESKTOP=(
     ufw
     archlinux-xdg-menu
     okular
-    tmux
 )
 
 PACMAN_EXTRA=(
@@ -542,12 +541,25 @@ add_luks_keyfile() {
 }
 
 setup_keyd() {
-    [[ -f "${PERSONAL_DIR}/.config/keyd/default.conf" ]] || return 0
+    [[ -f "${PERSONAL_DIR}/.config/keyd/default.conf" ]] || { warn "Нет конфига keyd"; return 0; }
+    command -v keyd >/dev/null || { warn "Нет keyd. Сначала ./setup.sh packages"; return 0; }
     log "keyd: capslock = ctrl/esc"
     sudo install -d -m 755 /etc/keyd
     sudo install -m 644 "${PERSONAL_DIR}/.config/keyd/default.conf" /etc/keyd/default.conf
-    sudo systemctl enable --now keyd
-    sudo keyd reload || true
+    sudo install -d /etc/systemd/system/keyd.service.d
+    sudo tee /etc/systemd/system/keyd.service.d/restart.conf >/dev/null << 'EOF'
+[Service]
+Restart=on-failure
+RestartSec=1
+EOF
+    sudo systemctl daemon-reload
+    sudo systemctl enable keyd
+    sudo systemctl restart keyd
+    if systemctl is-active --quiet keyd; then
+        log "keyd запущен. Caps Lock: удержание Ctrl, короткое нажатие Esc."
+    else
+        warn "keyd не запустился. Пришли: systemctl status keyd --no-pager"
+    fi
 }
 
 setup_tmux_plugins() {
