@@ -986,8 +986,11 @@ main() {
      Строка загрузки LUKS в /etc/default/grub не переписывается.
   10. Тема Rosé Pine Moon: GTK (rose-pine-moon-gtk + иконки), Qt через Kvantum,
      MangoHud, fzf. nvim не трогал. Подсветка zsh уже была Moon.
-  11. Battle.net: открой Lutris и поставь скрипт battlenet-standard
+  11. Battle.net: в Lutris открой настройки, вкладка Updates, и скачай DXVK
+      и vkd3d. Без них установщик падает сразу после создания префикса.
+      Потом поставь скрипт battlenet-standard
       (или в терминале: lutris lutris:install/battlenet-standard).
+      Если установка уже оборвалась, удали ~/Games/battlenet и начни заново.
       На первом установщике не логинься, пока он сам не закроется.
       Потом из лаунчера ставь WoW и Warcraft III Reforged.
       Раннер в Lutris: последний GE-Proton, не системный wine.
