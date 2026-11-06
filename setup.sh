@@ -222,6 +222,13 @@ aur_install() {
     for pkg in "$@"; do
         [[ -z "${pkg}" ]] && continue
         log "AUR: ${pkg}"
+        # protonup-qt и protonup-qt-bin ставят один и тот же пакет.
+        # --noconfirm не умеет сам подтвердить замену.
+        if [[ "${pkg}" == "protonup-qt-bin" ]] && pacman -Qq protonup-qt &>/dev/null \
+            && ! pacman -Qq protonup-qt-bin &>/dev/null; then
+            log "Снимаю protonup-qt, его место займёт protonup-qt-bin"
+            sudo pacman -Rdd --noconfirm protonup-qt || warn "Не снял protonup-qt"
+        fi
         if paru -S --noconfirm --needed --skipreview "${pkg}"; then
             :
         else
@@ -617,8 +624,7 @@ EOF
     local body profile
     body="${marker}
 if [ -z \"\${WAYLAND_DISPLAY}\" ] && [ \"\$(tty)\" = \"/dev/tty1\" ]; then
-    # pam_systemd даёт cap_wake_alarm. С ней bwrap не стартует и glycin не декодирует иконки.
-    exec setpriv --ambient-caps -all --inh-caps -all -- start-hyprland
+    exec start-hyprland
 fi"
     mkdir -p "${HOME}/.config/zsh"
     for profile in "${HOME}/.config/zsh/.zprofile" "${HOME}/.zprofile" "${HOME}/.bash_profile"; do
