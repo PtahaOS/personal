@@ -41,7 +41,7 @@ PACMAN_BASE=(
     base-devel git curl wget rsync unzip zip
     pacman-contrib man-db man-pages
     fzf
-    zsh eza atuin keyd
+    zsh eza atuin keyd keychain
     pciutils
     plymouth
 )
