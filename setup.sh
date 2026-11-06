@@ -80,6 +80,7 @@ PACMAN_DESKTOP=(
     ufw
     archlinux-xdg-menu
     okular
+    tmux
 )
 
 PACMAN_EXTRA=(
