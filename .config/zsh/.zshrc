@@ -76,5 +76,5 @@ unset LS_COLORS
 unset EZA_COLORS
 
 # rustlings
-export PATH="${HOME}/dev/rustlings:${PATH}"
+export PATH="${HOME}/.cargo/bin:${PATH}"
 
