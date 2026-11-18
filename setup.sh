@@ -917,6 +917,30 @@ setup_wallpaper() {
     awww img "${img}" || warn "awww не смог поставить обои"
 }
 
+setup_ssh_agent() {
+    # keychain только поднимает агент. Ключ добавляет сам ssh при первом
+    # использовании, поэтому WezTerm больше не спрашивает пароль на старте.
+    mkdir -p "${HOME}/.ssh"
+    chmod 700 "${HOME}/.ssh"
+    local cfg="${HOME}/.ssh/config"
+    local marker="# ptaha-ssh-agent"
+    [[ -f "${cfg}" ]] && grep -qF "${marker}" "${cfg}" && return 0
+    local block
+    block="${marker}
+Host github.com
+  IdentityFile ~/.ssh/id_ed25519
+Host *
+  AddKeysToAgent yes
+"
+    if [[ -f "${cfg}" ]]; then
+        printf '%s\n%s\n' "${block}" "$(cat "${cfg}")" > "${cfg}.tmp"
+        mv "${cfg}.tmp" "${cfg}"
+    else
+        printf '%s\n' "${block}" > "${cfg}"
+    fi
+    chmod 600 "${cfg}"
+}
+
 cmd_dotfiles() {
     need_user
     clone_or_pull "${PERSONAL_URL}" "${PERSONAL_DIR}"
@@ -927,6 +951,7 @@ cmd_dotfiles() {
     setup_gtk4_theme
     setup_color_scheme
     setup_zsh
+    setup_ssh_agent
     setup_keyd
     setup_tmux_plugins
     setup_autologin
