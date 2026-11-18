@@ -271,24 +271,6 @@ deploy_dotfiles() {
     [[ -d "${PERSONAL_DIR}/.config" ]] || die "Нет ${PERSONAL_DIR}/.config. Сначала клон personal."
 
     log "Раскладываю конфиги"
-    # Старые файлы оболочки не затираем молча: рядом ляжет копия .bak.
-    if [[ -d "${PERSONAL_DIR}/.config/zsh" ]]; then
-        mkdir -p "${HOME}/.config/zsh"
-        local zf zstamp
-        zstamp="$(date +%Y%m%d-%H%M%S)"
-        for zf in .zshrc .zprofile aliases.zsh zshenv; do
-            if [[ -f "${HOME}/.config/zsh/${zf}" && -f "${PERSONAL_DIR}/.config/zsh/${zf}" ]] \
-                && ! cmp -s "${HOME}/.config/zsh/${zf}" "${PERSONAL_DIR}/.config/zsh/${zf}"; then
-                cp -a "${HOME}/.config/zsh/${zf}" "${HOME}/.config/zsh/${zf}.bak.${zstamp}"
-                log "Бэкап ~/.config/zsh/${zf}"
-            fi
-        done
-        if [[ -f "${HOME}/.zshenv" && -f "${PERSONAL_DIR}/.config/zsh/zshenv" ]] \
-            && ! cmp -s "${HOME}/.zshenv" "${PERSONAL_DIR}/.config/zsh/zshenv"; then
-            cp -a "${HOME}/.zshenv" "${HOME}/.zshenv.bak.${zstamp}"
-            log "Бэкап ~/.zshenv"
-        fi
-    fi
     sync_dir "${PERSONAL_DIR}/.config/hypr"    "${HOME}/.config/hypr"
     sync_dir "${PERSONAL_DIR}/.config/waybar"  "${HOME}/.config/waybar"
     sync_dir "${PERSONAL_DIR}/.config/rofi"    "${HOME}/.config/rofi"
