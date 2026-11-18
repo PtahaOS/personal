@@ -1,4 +1,5 @@
-# Конфиг целиком здесь. setup.sh его только копирует и ничего в нём не дописывает.
+# Конфиг целиком здесь. setup.sh копирует personal/.config/zsh в ~/.config/zsh
+# и больше ничего в эти файлы не дописывает.
 # Плагины: zinit, atuin, fzf-tab, fast-syntax-highlighting. Oh My Zsh нет. Starship нет.
 
 # --- zinit -----------------------------------------------------------------
@@ -22,7 +23,12 @@ HISTFILE="${HOME}/.zsh_history"
 setopt APPEND_HISTORY INC_APPEND_HISTORY SHARE_HISTORY EXTENDED_HISTORY
 setopt HIST_IGNORE_DUPS HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_REDUCE_BLANKS
 
-[[ -r "${HOME}/.config/zsh/aliases.zsh" ]] && source "${HOME}/.config/zsh/aliases.zsh"
+# Все *.zsh из этой же папки: aliases и любой новый файл, который положишь рядом.
+_ptaha_zsh_dir="${${(%):-%x}:h}"
+for _ptaha_zsh in "${_ptaha_zsh_dir}/"*.zsh(N); do
+    source "${_ptaha_zsh}"
+done
+unset _ptaha_zsh _ptaha_zsh_dir
 
 # Агент без ключа. Пароль не спрашивается при открытии терминала.
 # Первый git или ssh спросит его сам и запомнит до конца сессии.
